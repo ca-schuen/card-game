@@ -26,7 +26,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -103,6 +105,23 @@ class GameControllerTest {
         mockMvc.perform(post("/api/games/abc/new-round"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.sessionId").value("session-1"));
+    }
+
+    @Test
+    void preflightAllowsLocalhost5500() throws Exception {
+        mockMvc.perform(options("/api/games")
+                .header("Origin", "http://localhost:5500")
+                .header("Access-Control-Request-Method", "POST"))
+            .andExpect(status().is2xxSuccessful())
+            .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5500"));
+    }
+
+    @Test
+    void preflightRejectsDisallowedOrigin() throws Exception {
+        mockMvc.perform(options("/api/games")
+                .header("Origin", "http://localhost:9999")
+                .header("Access-Control-Request-Method", "POST"))
+            .andExpect(status().isForbidden());
     }
 
     private GameState sampleState() {
