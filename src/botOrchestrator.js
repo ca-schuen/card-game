@@ -56,7 +56,14 @@ async function revealBotCards(trick, humanSeat, onBotCard, options = {}) {
   }
 }
 
-module.exports = {
-  revealBotCards,
-  getBotPlaysInOrder
-};
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    revealBotCards,
+    getBotPlaysInOrder
+  };
+}
+
+if (typeof window !== 'undefined') {
+  window.revealBotCards = revealBotCards;
+  window.getBotPlaysInOrder = getBotPlaysInOrder;
+}

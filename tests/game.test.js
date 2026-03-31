@@ -12,6 +12,138 @@ const {
   getVisiblePlayer,
   shouldShowBiddingControls
 } = require('../src/uiState');
+const { SauspielGame } = require('../src/game');
+
+function createMockClassList(initialClasses = []) {
+  const classes = new Set(initialClasses);
+
+  return {
+    add: (...names) => {
+      names.forEach((name) => classes.add(name));
+    },
+    remove: (...names) => {
+      names.forEach((name) => classes.delete(name));
+    },
+    toggle: (name, force) => {
+      if (force === true) {
+        classes.add(name);
+        return true;
+      }
+      if (force === false) {
+        classes.delete(name);
+        return false;
+      }
+      if (classes.has(name)) {
+        classes.delete(name);
+        return false;
+      }
+      classes.add(name);
+      return true;
+    },
+    contains: (name) => classes.has(name)
+  };
+}
+
+function createMockElement(id = '') {
+  const element = {
+    id,
+    textContent: '',
+    className: '',
+    title: '',
+    children: [],
+    onclick: null,
+    listeners: {},
+    classList: createMockClassList(),
+    appendChild(child) {
+      this.children.push(child);
+      return child;
+    },
+    querySelector(selector) {
+      if (selector === '.player-name') {
+        return this.playerName;
+      }
+      if (selector === '.player-score') {
+        return this.playerScore;
+      }
+      return null;
+    },
+    addEventListener(eventName, handler) {
+      this.listeners[eventName] = handler;
+    }
+  };
+
+  let innerHtmlValue = '';
+  Object.defineProperty(element, 'innerHTML', {
+    get() {
+      return innerHtmlValue;
+    },
+    set(value) {
+      innerHtmlValue = value;
+      if (value === '') {
+        this.children = [];
+      }
+    }
+  });
+
+  return element;
+}
+
+function createMockDocument() {
+  const elements = {
+    dealerDisplay: createMockElement('dealerDisplay'),
+    phaseDisplay: createMockElement('phaseDisplay'),
+    playerHand: createMockElement('playerHand'),
+    playerNumber: createMockElement('playerNumber'),
+    trickCards: createMockElement('trickCards'),
+    biddingSection: createMockElement('biddingSection'),
+    newGameBtn: createMockElement('newGameBtn'),
+    bidBtn: createMockElement('bidBtn'),
+    passBtn: createMockElement('passBtn'),
+    messageBox: createMockElement('messageBox')
+  };
+
+  for (let index = 0; index < 4; index += 1) {
+    const row = createMockElement(`score-${index}`);
+    row.playerName = createMockElement(`score-${index}-name`);
+    row.playerScore = createMockElement(`score-${index}-value`);
+    elements[`score-${index}`] = row;
+  }
+
+  return {
+    elements,
+    getElementById(id) {
+      return this.elements[id] || null;
+    },
+    createElement(tagName) {
+      return createMockElement(tagName);
+    }
+  };
+}
+
+function createGameState(overrides = {}) {
+  return {
+    sessionId: 'session-1',
+    humanHand: [
+      { suit: 'E', rank: 'A' },
+      { suit: 'G', rank: '10' }
+    ],
+    currentTrick: [],
+    completedTricks: [],
+    scores: {
+      team: 0,
+      opponents: 0
+    },
+    trickCount: 0,
+    roundComplete: false,
+    winner: null,
+    gameType: 'sauspiel',
+    soloSuit: null,
+    humanSeat: 0,
+    humanTurn: true,
+    leadSeat: 0,
+    ...overrides
+  };
+}
 
 /**
  * Tests for Sauspiel Game Controller Logic
@@ -253,5 +385,91 @@ describe('Sauspiel Game Rules (MVP Implementation)', () => {
   test('game requires first to win 3 rounds', () => {
     const scores = [3, 2, 0, 0];
     expect(Math.max(...scores)).toBe(3); // Winner has 3 rounds
+  });
+});
+
+describe('SauspielGame backend integration', () => {
+  test('newGame creates a backend session and renders only the human hand', async () => {
+    const mockDocument = createMockDocument();
+    const createGameMock = jest.fn().mockResolvedValue(createGameState());
+    const game = new SauspielGame({
+      document: mockDocument,
+      createGame: createGameMock,
+      playCard: jest.fn(),
+      newRound: jest.fn(),
+      revealBotCards: jest.fn().mockResolvedValue(undefined)
+    });
+
+    await game.newGame();
+
+    expect(createGameMock).toHaveBeenCalledWith('sauspiel', null);
+    expect(mockDocument.getElementById('playerHand').children).toHaveLength(2);
+    expect(mockDocument.getElementById('playerNumber').textContent).toBe('You');
+    expect(mockDocument.getElementById('messageBox').textContent).toContain('Your turn');
+    expect(mockDocument.getElementById('biddingSection').classList.contains('hidden')).toBe(true);
+  });
+
+  test('playCard submits one human move and reveals bot responses from the backend', async () => {
+    const mockDocument = createMockDocument();
+    const firstState = createGameState();
+    const completedTrick = [
+      { seat: 0, card: { suit: 'E', rank: 'A' } },
+      { seat: 1, card: { suit: 'G', rank: 'K' } },
+      { seat: 2, card: { suit: 'S', rank: '7' } },
+      { seat: 3, card: { suit: 'H', rank: '9' } }
+    ];
+    const nextState = createGameState({
+      humanHand: [{ suit: 'G', rank: '10' }],
+      currentTrick: [
+        { seat: 1, card: { suit: 'S', rank: 'A' } },
+        { seat: 2, card: { suit: 'S', rank: '10' } },
+        { seat: 3, card: { suit: 'S', rank: 'K' } }
+      ],
+      completedTricks: [completedTrick],
+      trickCount: 1,
+      leadSeat: 1
+    });
+    const playCardMock = jest.fn().mockResolvedValue(nextState);
+    const revealBotCardsMock = jest.fn().mockImplementation(async (trick, humanSeat, onBotCard) => {
+      trick
+        .filter((play) => play.seat !== humanSeat)
+        .forEach((play, index) => onBotCard(play, index));
+    });
+    const game = new SauspielGame({
+      document: mockDocument,
+      createGame: jest.fn().mockResolvedValue(firstState),
+      playCard: playCardMock,
+      newRound: jest.fn(),
+      revealBotCards: revealBotCardsMock
+    });
+
+    await game.newGame();
+    await game.playCard(0);
+
+    expect(playCardMock).toHaveBeenCalledWith('session-1', 0);
+    expect(revealBotCardsMock).toHaveBeenCalledWith(
+      completedTrick,
+      0,
+      expect.any(Function)
+    );
+    expect(mockDocument.getElementById('playerHand').children).toHaveLength(1);
+    expect(mockDocument.getElementById('messageBox').textContent).toContain('Your turn');
+    expect(mockDocument.getElementById('score-3').playerScore.textContent).toBe('Bot 1');
+  });
+
+  test('network failures show the backend startup hint instead of rotating local players', async () => {
+    const mockDocument = createMockDocument();
+    const game = new SauspielGame({
+      document: mockDocument,
+      createGame: jest.fn().mockRejectedValue({ status: 0, message: 'Failed to fetch' }),
+      playCard: jest.fn(),
+      newRound: jest.fn(),
+      revealBotCards: jest.fn().mockResolvedValue(undefined)
+    });
+
+    await game.newGame();
+
+    expect(mockDocument.getElementById('messageBox').textContent).toContain('http://localhost:5500');
+    expect(mockDocument.getElementById('playerHand').children).toHaveLength(0);
   });
 });

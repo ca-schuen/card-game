@@ -271,6 +271,11 @@ main {
   gap: 15px;
 }
 
+.player-hand.is-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .card {
   background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%);
   border: 2px solid #e2e8f0;

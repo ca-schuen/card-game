@@ -86,10 +86,20 @@ async function newRound(sessionId) {
   });
 }
 
-module.exports = {
-  ApiError,
-  createGame,
-  getGameState,
-  playCard,
-  newRound
-};
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    ApiError,
+    createGame,
+    getGameState,
+    playCard,
+    newRound
+  };
+}
+
+if (typeof window !== 'undefined') {
+  window.ApiError = ApiError;
+  window.createGame = createGame;
+  window.getGameState = getGameState;
+  window.playCardRequest = playCard;
+  window.newRoundRequest = newRound;
+}
