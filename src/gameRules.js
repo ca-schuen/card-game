@@ -198,15 +198,18 @@ function countTrickPoints(trick) {
   }, 0);
 }
 
-module.exports = {
-  SUITS,
-  RANKS,
-  GAME_TYPES,
-  createLongDeck,
-  dealCards,
-  isTrump,
-  determineTrickWinner,
-  getCardPoints,
-  calculateHandValue,
-  countTrickPoints
-};
+// Support both Node.js and browser environments
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    SUITS,
+    RANKS,
+    GAME_TYPES,
+    createLongDeck,
+    dealCards,
+    isTrump,
+    determineTrickWinner,
+    getCardPoints,
+    calculateHandValue,
+    countTrickPoints
+  };
+}
