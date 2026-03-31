@@ -36,9 +36,17 @@ Open `index.html` in a web browser and follow the on-screen prompts:
 This repository is prepared for a local multi-agent development flow with:
 - Frontend card game code in `src/`
 - Tests in `tests/`
-- Future Spring Boot backend in `backend/`
+- Spring Boot bot-player backend in `backend/`
 - CI quality gates in GitHub Actions
 - Custom Copilot agents for organized feature delivery
+
+## Bot Player
+
+The game now supports one human player and three bot players.
+
+- Human player: seat 0 (UI-controlled)
+- Bot players: seats 1-3 (server-controlled via heuristic strategy)
+- Bot behavior is resolved by the backend and synced back to the frontend game state
 
 ## Local Development Setup
 
@@ -48,6 +56,25 @@ npm run lint     # Check code style
 npm run test     # Run unit tests
 npm run test:ci  # Run tests with coverage report
 ```
+
+### Backend Setup
+
+Start the Spring Boot backend in dev mode:
+
+```powershell
+mvn -f backend/pom.xml spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+The backend runs with CORS configured for localhost development.
+
+### API Quick Reference
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/games` | Create a new game session (human + bots) |
+| GET | `/api/games/{id}` | Get current game state by session ID |
+| POST | `/api/games/{id}/play` | Play a card for the active seat and resolve bot turns |
+| POST | `/api/games/{id}/new-round` | Start a new round using the existing session |
 
 ### Running the Game
 
@@ -63,10 +90,17 @@ card-game/
 ├── src/
 │   ├── gameRules.js        # Core game logic (32-card deck, rules, scoring)
 │   ├── game.js             # Game controller (UI binding, state management)
+│   ├── apiClient.js        # Backend API client (create/get/play/new-round)
+│   ├── botOrchestrator.js  # Bot reveal/turn animation sequencer
 │   └── style.css           # Game UI styling
+├── backend/
+│   ├── src/main/java/      # Spring Boot REST API + bot strategy + session store
+│   └── src/test/java/      # Backend unit and slice tests
 ├── tests/
 │   ├── gameRules.test.js   # Unit tests for game rules
-│   └── game.test.js        # Integration tests for game controller
+│   ├── game.test.js        # Integration tests for game controller
+│   ├── apiClient.test.js   # API client behavior tests
+│   └── botOrchestrator.test.js # Bot animation sequencing tests
 ├── scripts/
 │   ├── feature-orchestrator.ps1    # Create feature branch and issue
 │   ├── create-pr.ps1               # Open pull request
@@ -125,6 +159,8 @@ scripts/wait-quality-gates.ps1 -PullRequestNumber <pr-number>
 
 **CI Pipeline** (`.github/workflows/ci.yml`):
 - ✅ Frontend: ESLint + Jest tests
-- ✅ Backend (when `backend/pom.xml` exists): Maven verify
+- ✅ Backend: Maven verify (`mvn -f backend/pom.xml verify`)
 - ✅ Code coverage and quality gates
+
+Current automated coverage includes 54 JavaScript tests and 27 Java tests.
 
