@@ -473,3 +473,225 @@ describe('SauspielGame backend integration', () => {
     expect(mockDocument.getElementById('playerHand').children).toHaveLength(0);
   });
 });
+
+describe('Legal Card Indices and Card Restrictions', () => {
+  test('marks legal cards with playable class when humanTurn and legalCardIndices provided', async () => {
+    const mockDocument = createMockDocument();
+    const state = createGameState({
+      humanHand: [
+        { suit: 'E', rank: 'A' },
+        { suit: 'E', rank: 'K' },
+        { suit: 'G', rank: '10' }
+      ],
+      legalCardIndices: [0, 1], // Only cards at index 0 and 1 are legal
+      humanTurn: true
+    });
+    const game = new SauspielGame({
+      document: mockDocument,
+      createGame: jest.fn().mockResolvedValue(state),
+      playCard: jest.fn(),
+      newRound: jest.fn(),
+      revealBotCards: jest.fn().mockResolvedValue(undefined)
+    });
+
+    await game.newGame();
+
+    const handContainer = mockDocument.getElementById('playerHand');
+    expect(handContainer.children[0].classList.contains('playable')).toBe(true);
+    expect(handContainer.children[1].classList.contains('playable')).toBe(true);
+    expect(handContainer.children[2].classList.contains('is-illegal')).toBe(true);
+  });
+
+  test('marks illegal cards with is-illegal class when humanTurn and not in legalCardIndices', async () => {
+    const mockDocument = createMockDocument();
+    const state = createGameState({
+      humanHand: [
+        { suit: 'E', rank: 'A' },
+        { suit: 'G', rank: '10' }
+      ],
+      legalCardIndices: [0], // Only card at index 0 is legal
+      humanTurn: true
+    });
+    const game = new SauspielGame({
+      document: mockDocument,
+      createGame: jest.fn().mockResolvedValue(state),
+      playCard: jest.fn(),
+      newRound: jest.fn(),
+      revealBotCards: jest.fn().mockResolvedValue(undefined)
+    });
+
+    await game.newGame();
+
+    const handContainer = mockDocument.getElementById('playerHand');
+    expect(handContainer.children[1].classList.contains('is-illegal')).toBe(true);
+    expect(handContainer.children[1].classList.contains('playable')).toBe(false);
+  });
+
+  test('does not mark cards as illegal when not humanTurn even if legalCardIndices excludes them', async () => {
+    const mockDocument = createMockDocument();
+    const state = createGameState({
+      humanHand: [
+        { suit: 'E', rank: 'A' },
+        { suit: 'G', rank: '10' }
+      ],
+      legalCardIndices: [0], // Only card at index 0 is legal
+      humanTurn: false // Not human's turn
+    });
+    const game = new SauspielGame({
+      document: mockDocument,
+      createGame: jest.fn().mockResolvedValue(state),
+      playCard: jest.fn(),
+      newRound: jest.fn(),
+      revealBotCards: jest.fn().mockResolvedValue(undefined)
+    });
+
+    await game.newGame();
+
+    const handContainer = mockDocument.getElementById('playerHand');
+    expect(handContainer.children[0].classList.contains('is-illegal')).toBe(false);
+    expect(handContainer.children[1].classList.contains('is-illegal')).toBe(false);
+    expect(handContainer.children[0].classList.contains('playable')).toBe(false);
+    expect(handContainer.children[1].classList.contains('playable')).toBe(false);
+  });
+
+  test('treats all cards as legal when legalCardIndices is empty', async () => {
+    const mockDocument = createMockDocument();
+    const state = createGameState({
+      humanHand: [
+        { suit: 'E', rank: 'A' },
+        { suit: 'G', rank: '10' }
+      ],
+      legalCardIndices: [], // Empty means all cards are legal
+      humanTurn: true
+    });
+    const game = new SauspielGame({
+      document: mockDocument,
+      createGame: jest.fn().mockResolvedValue(state),
+      playCard: jest.fn(),
+      newRound: jest.fn(),
+      revealBotCards: jest.fn().mockResolvedValue(undefined)
+    });
+
+    await game.newGame();
+
+    const handContainer = mockDocument.getElementById('playerHand');
+    expect(handContainer.children[0].classList.contains('playable')).toBe(true);
+    expect(handContainer.children[1].classList.contains('playable')).toBe(true);
+    expect(handContainer.children[0].classList.contains('is-illegal')).toBe(false);
+    expect(handContainer.children[1].classList.contains('is-illegal')).toBe(false);
+  });
+
+  test('treats all cards as legal when legalCardIndices is undefined', async () => {
+    const mockDocument = createMockDocument();
+    const state = createGameState({
+      humanHand: [
+        { suit: 'E', rank: 'A' },
+        { suit: 'G', rank: '10' }
+      ],
+      legalCardIndices: undefined, // Undefined means all cards are legal
+      humanTurn: true
+    });
+    const game = new SauspielGame({
+      document: mockDocument,
+      createGame: jest.fn().mockResolvedValue(state),
+      playCard: jest.fn(),
+      newRound: jest.fn(),
+      revealBotCards: jest.fn().mockResolvedValue(undefined)
+    });
+
+    await game.newGame();
+
+    const handContainer = mockDocument.getElementById('playerHand');
+    expect(handContainer.children[0].classList.contains('playable')).toBe(true);
+    expect(handContainer.children[1].classList.contains('playable')).toBe(true);
+  });
+
+  test('prevents playCard from being called on illegal card elements', async () => {
+    const mockDocument = createMockDocument();
+    const state = createGameState({
+      humanHand: [
+        { suit: 'E', rank: 'A' },
+        { suit: 'G', rank: '10' }
+      ],
+      legalCardIndices: [0], // Only card at index 0 is legal
+      humanTurn: true
+    });
+    const game = new SauspielGame({
+      document: mockDocument,
+      createGame: jest.fn().mockResolvedValue(state),
+      playCard: jest.fn(),
+      newRound: jest.fn(),
+      revealBotCards: jest.fn().mockResolvedValue(undefined)
+    });
+
+    await game.newGame();
+
+    const handContainer = mockDocument.getElementById('playerHand');
+    // Verify that only legal card has an onclick handler
+    expect(handContainer.children[0].onclick).toBeDefined();
+    expect(handContainer.children[1].onclick).toBeNull();
+  });
+
+  test('playCard rejects illegal card play with error message', async () => {
+    const mockDocument = createMockDocument();
+    const state = createGameState({
+      humanHand: [
+        { suit: 'E', rank: 'A' },
+        { suit: 'G', rank: '10' }
+      ],
+      legalCardIndices: [0], // Only card at index 0 is legal
+      humanTurn: true
+    });
+    const playCardMock = jest.fn();
+    const game = new SauspielGame({
+      document: mockDocument,
+      createGame: jest.fn().mockResolvedValue(state),
+      playCard: playCardMock,
+      newRound: jest.fn(),
+      revealBotCards: jest.fn().mockResolvedValue(undefined)
+    });
+
+    await game.newGame();
+    
+    // Try to play an illegal card (index 1)
+    await game.playCard(1);
+
+    expect(playCardMock).not.toHaveBeenCalled(); // Backend should not be called
+    expect(mockDocument.getElementById('messageBox').textContent).toContain('cannot play this card');
+  });
+
+  test('playCard succeeds for legal cards in legalCardIndices', async () => {
+    const mockDocument = createMockDocument();
+    const firstState = createGameState({
+      humanHand: [
+        { suit: 'E', rank: 'A' },
+        { suit: 'G', rank: '10' }
+      ],
+      legalCardIndices: [0], // Only card at index 0 is legal
+      humanTurn: true
+    });
+    const nextState = createGameState({
+      humanHand: [{ suit: 'G', rank: '10' }],
+      currentTrick: [],
+      completedTricks: [],
+      humanTurn: false,
+      legalCardIndices: []
+    });
+    const playCardMock = jest.fn().mockResolvedValue(nextState);
+    const game = new SauspielGame({
+      document: mockDocument,
+      createGame: jest.fn().mockResolvedValue(firstState),
+      playCard: playCardMock,
+      newRound: jest.fn(),
+      revealBotCards: jest.fn().mockResolvedValue(undefined)
+    });
+
+    await game.newGame();
+    
+    // Play a legal card (index 0)
+    await game.playCard(0);
+
+    expect(playCardMock).toHaveBeenCalledWith('session-1', 0);
+  });
+});
+

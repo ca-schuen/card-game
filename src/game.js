@@ -72,6 +72,12 @@ class SauspielGame {
       return;
     }
 
+    // Check if the card is legal to play
+    if (!this.isCardLegal(cardIndex)) {
+      this.showMessage('You cannot play this card. Follow the suit if possible.', 'error');
+      return;
+    }
+
     const humanSeat = this.gameState.humanSeat;
     const previousState = this.gameState;
     this.gamePhase = 'submitting';
@@ -296,10 +302,16 @@ class SauspielGame {
     hand.forEach((card, index) => {
       const cardEl = this.createCardElement(card);
       if (this.gamePhase === 'human-turn') {
-        cardEl.classList.add('playable');
-        cardEl.onclick = () => {
-          this.playCard(index);
-        };
+        // Check if this card is legal to play
+        if (this.isCardLegal(index)) {
+          cardEl.classList.add('playable');
+          cardEl.onclick = () => {
+            this.playCard(index);
+          };
+        } else {
+          // Mark illegal cards so they are visually disabled
+          cardEl.classList.add('is-illegal');
+        }
       }
 
       handContainer.appendChild(cardEl);
@@ -384,6 +396,21 @@ class SauspielGame {
       newGameBtn.textContent =
         this.gameState && this.gameState.roundComplete ? 'Next Round' : 'New Game';
     }
+  }
+
+  isCardLegal(cardIndex) {
+    // If legalCardIndices is not available, treat all cards as legal (on not human's turn)
+    if (!this.gameState || !this.gameState.humanTurn) {
+      return true;
+    }
+
+    const legalIndices = this.gameState.legalCardIndices;
+    if (!Array.isArray(legalIndices) || legalIndices.length === 0) {
+      // No restrictions, all cards are legal
+      return true;
+    }
+
+    return legalIndices.includes(cardIndex);
   }
 
   createCardElement(card) {

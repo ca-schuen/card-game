@@ -16,6 +16,7 @@ public record GameState(
     Suit soloSuit,
     int humanSeat,
     boolean humanTurn,
-    int leadSeat
+    int leadSeat,
+    List<Integer> legalCardIndices
 ) {
 }

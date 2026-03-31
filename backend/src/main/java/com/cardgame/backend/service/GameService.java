@@ -12,6 +12,7 @@ import com.cardgame.backend.model.PlayRequest;
 import com.cardgame.backend.session.InMemorySessionStore;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -72,9 +73,13 @@ public class GameService {
     }
 
     private GameState toState(GameSession session) {
+        List<Card> humanHand = session.humanHandView();
+        List<Card> legal = gameEngine.legalCards(session, GameSession.HUMAN_SEAT);
+        List<Integer> legalIndices = computeLegalCardIndices(humanHand, legal);
+
         return new GameState(
             session.sessionId(),
-            session.humanHandView(),
+            humanHand,
             session.currentTrickView(),
             session.completedTricksView(),
             Map.of("team", session.teamScore(), "opponents", session.opponentsScore()),
@@ -85,8 +90,22 @@ public class GameService {
             session.soloSuit(),
             GameSession.HUMAN_SEAT,
             session.humanTurn(),
-            session.leadSeat()
+            session.leadSeat(),
+            legalIndices
         );
+    }
+
+    private List<Integer> computeLegalCardIndices(List<Card> humanHand, List<Card> legalCards) {
+        List<Integer> indices = new ArrayList<>();
+        for (Card legalCard : legalCards) {
+            for (int i = 0; i < humanHand.size(); i++) {
+                if (humanHand.get(i).equals(legalCard)) {
+                    indices.add(i);
+                    break;
+                }
+            }
+        }
+        return indices;
     }
 
     private void validateCreateRequest(CreateGameRequest request) {

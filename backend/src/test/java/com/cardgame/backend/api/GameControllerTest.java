@@ -138,7 +138,8 @@ class GameControllerTest {
             null,
             0,
             true,
-            0
+            0,
+            List.of(0)
         );
     }
 }

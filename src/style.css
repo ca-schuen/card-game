@@ -317,6 +317,21 @@ main {
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
 }
 
+.card.is-illegal {
+  border-color: #cbd5e0;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.card.is-illegal:hover {
+  border-color: #cbd5e0;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+  transform: none;
+  box-shadow: none;
+}
+
 .card.suit-heart::before {
   content: '♥';
   color: #e53e3e;
