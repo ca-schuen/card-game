@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sauspiel Card Game</title>
+    <link rel="stylesheet" href="src/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Sauspiel</h1>
+        <button id="newGameBtn" class="btn btn-primary">New Game</button>
+      </header>
+
+      <main>
+        <!-- Game Status Section -->
+        <section class="game-status">
+          <div class="status-info">
+            <div class="current-dealer">
+              Dealer: <span id="dealerDisplay">—</span>
+            </div>
+            <div class="game-phase">
+              Phase: <span id="phaseDisplay">—</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Trick Display Section -->
+        <section class="trick-display">
+          <h2>Current Trick</h2>
+          <div id="trickCards" class="trick-cards">
+            <div class="trick-position" id="trick-0">
+              <div class="placeholder">Player 0</div>
+            </div>
+            <div class="trick-position" id="trick-1">
+              <div class="placeholder">Player 1</div>
+            </div>
+            <div class="trick-position" id="trick-2">
+              <div class="placeholder">Player 2</div>
+            </div>
+            <div class="trick-position" id="trick-3">
+              <div class="placeholder">Player 3</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Scores Section -->
+        <section class="scores">
+          <h2>Scores</h2>
+          <div id="scoreBoard" class="score-board">
+            <div class="score-item" id="score-0">
+              <span class="player-name">Player 0</span>
+              <span class="player-score">0</span>
+            </div>
+            <div class="score-item" id="score-1">
+              <span class="player-name">Player 1</span>
+              <span class="player-score">0</span>
+            </div>
+            <div class="score-item" id="score-2">
+              <span class="player-name">Player 2</span>
+              <span class="player-score">0</span>
+            </div>
+            <div class="score-item" id="score-3">
+              <span class="player-name">Player 3</span>
+              <span class="player-score">0</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Player Hand Section -->
+        <section class="hand-section">
+          <div class="hand-header">
+            <div>
+              <h2>Your Hand</h2>
+              <p class="hand-sort-hint">Sorted: trumps, then suits</p>
+            </div>
+            <div id="currentPlayerDisplay" class="current-player">
+              (Player <span id="playerNumber">—</span>)
+            </div>
+          </div>
+          <div id="playerHand" class="player-hand">
+            <!-- Cards will be rendered here -->
+          </div>
+        </section>
+
+        <!-- Game Messages Section -->
+        <section class="game-messages">
+          <div id="messageBox" class="message-box" role="status" aria-live="polite">
+            Welcome to Sauspiel! Click "New Game" to start.
+          </div>
+        </section>
+
+        <!-- Bidding Section (during bid phase) -->
+        <section id="biddingSection" class="bidding-section hidden">
+          <h3>Bid or Pass</h3>
+          <button id="bidBtn" class="btn btn-success">Bid Sauspiel</button>
+          <button id="passBtn" class="btn btn-secondary">Pass</button>
+        </section>
+      </main>
+
+      <footer>
+        <p>Sauspiel MVP - Bavarian Card Game</p>
+      </footer>
+    </div>
+
+    <script src="src/gameRules.js"></script>
+    <script src="src/uiState.js"></script>
+    <script src="src/game.js"></script>
+  </body>
+</html>

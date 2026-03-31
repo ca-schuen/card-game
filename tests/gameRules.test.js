@@ -6,7 +6,8 @@ const {
   determineTrickWinner,
   getCardPoints,
   calculateHandValue,
-  countTrickPoints
+  countTrickPoints,
+  sortHandForDisplay
 } = require('../src/gameRules');
 
 describe('Schafkopf long deck', () => {
@@ -112,5 +113,31 @@ describe('point counting', () => {
     ];
 
     expect(countTrickPoints(trick)).toBe(25);
+  });
+});
+
+describe('visible hand sorting', () => {
+  test('sorts Sauspiel hands with trumps first and plain suits afterwards', () => {
+    const hand = [
+      { suit: 'S', rank: 'A' },
+      { suit: 'E', rank: '10' },
+      { suit: 'H', rank: 'K' },
+      { suit: 'G', rank: 'O' },
+      { suit: 'E', rank: 'A' },
+      { suit: 'S', rank: '7' },
+      { suit: 'H', rank: '7' }
+    ];
+
+    const sorted = sortHandForDisplay(hand, GAME_TYPES.SAUSPIEL);
+
+    expect(sorted.map(({ card }) => `${card.suit}${card.rank}`)).toEqual([
+      'GO',
+      'HK',
+      'H7',
+      'EA',
+      'E10',
+      'SA',
+      'S7'
+    ]);
   });
 });

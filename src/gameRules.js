@@ -22,6 +22,41 @@ const OBER_ORDER = ['E', 'G', 'H', 'S'];
 const UNTER_ORDER = ['E', 'G', 'H', 'S'];
 const PLAIN_ORDER = ['A', '10', 'K', 'O', 'U', '9', '8', '7'];
 const TRUMP_SUIT_ORDER = ['A', '10', 'K', '9', '8', '7'];
+const SAUSPIEL_PLAIN_SUIT_ORDER = ['E', 'G', 'S'];
+
+const SUIT_DISPLAY = {
+  E: {
+    name: 'Eichel',
+    shortName: 'Ei',
+    className: 'eichel'
+  },
+  G: {
+    name: 'Gras',
+    shortName: 'Gr',
+    className: 'gras'
+  },
+  H: {
+    name: 'Herz',
+    shortName: 'Hz',
+    className: 'herz'
+  },
+  S: {
+    name: 'Schellen',
+    shortName: 'Sc',
+    className: 'schellen'
+  }
+};
+
+const RANK_DISPLAY = {
+  A: 'Ass',
+  '10': '10',
+  K: 'Koenig',
+  O: 'Ober',
+  U: 'Unter',
+  '9': '9',
+  '8': '8',
+  '7': '7'
+};
 
 function isValidCard(card) {
   return (
@@ -198,15 +233,90 @@ function countTrickPoints(trick) {
   }, 0);
 }
 
-module.exports = {
-  SUITS,
-  RANKS,
-  GAME_TYPES,
-  createLongDeck,
-  dealCards,
-  isTrump,
-  determineTrickWinner,
-  getCardPoints,
-  calculateHandValue,
-  countTrickPoints
-};
+function getCardDisplayData(card, gameType = GAME_TYPES.SAUSPIEL, options = {}) {
+  if (!isValidCard(card)) {
+    throw new TypeError('invalid card');
+  }
+
+  const suitDisplay = SUIT_DISPLAY[card.suit];
+  const rankLabel = RANK_DISPLAY[card.rank];
+  const trump = isTrump(card, gameType, options);
+
+  return {
+    rank: card.rank,
+    rankLabel,
+    suit: card.suit,
+    suitName: suitDisplay.name,
+    suitShortName: suitDisplay.shortName,
+    suitClass: suitDisplay.className,
+    isTrump: trump,
+    ariaLabel: `${rankLabel} of ${suitDisplay.name}${trump ? ', trump' : ''}`
+  };
+}
+
+function getDisplaySortValue(card, gameType = GAME_TYPES.SAUSPIEL, options = {}) {
+  if (isTrump(card, gameType, options)) {
+    if (card.rank === 'O') {
+      return OBER_ORDER.indexOf(card.suit);
+    }
+
+    if (card.rank === 'U') {
+      return 10 + UNTER_ORDER.indexOf(card.suit);
+    }
+
+    const trumpSuit = getTrumpSuit(gameType, options);
+    return 20 + TRUMP_SUIT_ORDER.indexOf(card.rank) + SUITS.indexOf(trumpSuit);
+  }
+
+  const suitOrder =
+    gameType === GAME_TYPES.SAUSPIEL ? SAUSPIEL_PLAIN_SUIT_ORDER : SUITS;
+  const suitIndex = suitOrder.includes(card.suit)
+    ? suitOrder.indexOf(card.suit)
+    : suitOrder.length + SUITS.indexOf(card.suit);
+
+  return 100 + suitIndex * 10 + PLAIN_ORDER.indexOf(card.rank);
+}
+
+function sortHandForDisplay(cards, gameType = GAME_TYPES.SAUSPIEL, options = {}) {
+  if (!Array.isArray(cards)) {
+    throw new TypeError('cards must be an array');
+  }
+
+  return cards
+    .map((card, originalIndex) => {
+      if (!isValidCard(card)) {
+        throw new TypeError('cards must contain valid card objects');
+      }
+
+      return {
+        card,
+        originalIndex,
+        sortValue: getDisplaySortValue(card, gameType, options)
+      };
+    })
+    .sort((left, right) => {
+      if (left.sortValue !== right.sortValue) {
+        return left.sortValue - right.sortValue;
+      }
+
+      return left.originalIndex - right.originalIndex;
+    });
+}
+
+// Support both Node.js and browser environments
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    SUITS,
+    RANKS,
+    GAME_TYPES,
+    createLongDeck,
+    dealCards,
+    isTrump,
+    determineTrickWinner,
+    getCardPoints,
+    calculateHandValue,
+    countTrickPoints,
+    getCardDisplayData,
+    sortHandForDisplay
+  };
+}
