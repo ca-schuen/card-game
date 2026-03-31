@@ -1,0 +1,483 @@
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: #333;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header */
+header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* Buttons */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary {
+  background: #667eea;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-success {
+  background: #48bb78;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #38a169;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(72, 187, 120, 0.4);
+}
+
+.btn-secondary {
+  background: #cbd5e0;
+  color: #333;
+}
+
+.btn-secondary:hover {
+  background: #a0aec0;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(203, 213, 224, 0.4);
+}
+
+/* Main Content */
+main {
+  flex: 1;
+  padding: 30px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  overflow-y: auto;
+}
+
+/* Game Status */
+.game-status {
+  grid-column: 1 / -1;
+  background: #f7fafc;
+  padding: 20px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-around;
+  border-left: 4px solid #667eea;
+}
+
+.status-info > div {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.status-info span {
+  color: #667eea;
+  font-weight: 700;
+}
+
+/* Trick Display */
+.trick-display {
+  grid-column: 1 / -1;
+  background: linear-gradient(180deg, #edf2f7 0%, #e2e8f0 100%);
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.trick-display h2 {
+  margin-bottom: 20px;
+  color: #2d3748;
+  font-size: 1.3rem;
+}
+
+.trick-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  min-height: 150px;
+}
+
+.trick-position {
+  background: white;
+  border: 2px dashed #cbd5e0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+  transition: all 0.3s ease;
+}
+
+.trick-position:hover {
+  border-color: #667eea;
+  background: #f7fafc;
+}
+
+.placeholder {
+  color: #a0aec0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.trick-position .card {
+  width: 60px;
+  height: 80px;
+  background: white;
+  border: 2px solid #667eea;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+/* Scores */
+.scores {
+  grid-column: 1;
+  background: #f7fafc;
+  padding: 25px;
+  border-radius: 8px;
+  border-left: 4px solid #48bb78;
+}
+
+.scores h2 {
+  margin-bottom: 20px;
+  color: #2d3748;
+  font-size: 1.3rem;
+}
+
+.score-board {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.score-item {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.score-item:hover {
+  background: #edf2f7;
+  border-color: #667eea;
+}
+
+.score-item.active-player {
+  background: #edf2f7;
+  border: 2px solid #667eea;
+  font-weight: 600;
+}
+
+.player-name {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.player-score {
+  background: #667eea;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* Hand Section */
+.hand-section {
+  grid-column: 1 / -1;
+  background: #f7fafc;
+  padding: 25px;
+  border-radius: 8px;
+  border-top: 4px solid #667eea;
+}
+
+.hand-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.hand-header h2 {
+  color: #2d3748;
+  font-size: 1.3rem;
+}
+
+.current-player {
+  background: #edf2f7;
+  padding: 8px 16px;
+  border-radius: 6px;
+  color: #667eea;
+  font-weight: 600;
+}
+
+.player-hand {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 15px;
+}
+
+.card {
+  background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%);
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  min-height: 100px;
+}
+
+.card:hover {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+}
+
+.card.playable {
+  border-color: #48bb78;
+  cursor: pointer;
+  background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+}
+
+.card.playable:hover {
+  border-color: #38a169;
+  box-shadow: 0 10px 25px rgba(72, 187, 120, 0.3);
+}
+
+.card.selected {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.card.suit-heart::before {
+  content: '♥';
+  color: #e53e3e;
+}
+
+.card.suit-spade::before {
+  content: '♠';
+  color: #1a202c;
+}
+
+.card.suit-club::before {
+  content: '♣';
+  color: #1a202c;
+}
+
+.card.suit-diamond::before {
+  content: '♦';
+  color: #e53e3e;
+}
+
+/* Messages */
+.game-messages {
+  grid-column: 1 / -1;
+}
+
+.message-box {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  color: #2d3748;
+  font-size: 1rem;
+  line-height: 1.6;
+  text-align: center;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message-box.info {
+  background: #edf2f7;
+  border-color: #667eea;
+  color: #667eea;
+  font-weight: 600;
+}
+
+.message-box.success {
+  background: #f0fff4;
+  border-color: #48bb78;
+  color: #38a169;
+  font-weight: 600;
+}
+
+.message-box.error {
+  background: #fff5f5;
+  border-color: #e53e3e;
+  color: #e53e3e;
+  font-weight: 600;
+}
+
+/* Bidding Section */
+.bidding-section {
+  grid-column: 1 / -1;
+  background: #fff5f5;
+  border: 2px solid #feb2b2;
+  border-radius: 8px;
+  padding: 25px;
+  text-align: center;
+}
+
+.bidding-section h3 {
+  margin-bottom: 20px;
+  color: #742a2a;
+  font-size: 1.2rem;
+}
+
+.bidding-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.bidding-section button {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.1rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Footer */
+footer {
+  background: #2d3748;
+  color: white;
+  text-align: center;
+  padding: 20px;
+  border-top: 1px solid #1a202c;
+  font-size: 0.9rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+
+  .trick-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .scores {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+  }
+
+  main {
+    padding: 15px;
+    gap: 15px;
+  }
+
+  .player-hand {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .trick-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    min-height: 100%;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+  }
+
+  main {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .player-hand {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .trick-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .score-board {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

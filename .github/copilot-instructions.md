@@ -29,6 +29,17 @@ This repository is configured for a comprehensive multi-agent delivery flow:
 13. If CI fails, Ops CI Engineer posts detailed error analysis and remediation steps as PR comments.
 14. Once all CI checks pass, organizer handles merge or retest.
 
+## Required Sequence For Post-PR Corrections
+Use this flow when a PR branch is already checked out and a bug or quality concern is found after feature delivery.
+1. Start from the `Organizer` custom agent using `/pr-bugfix-flow`.
+2. Convert reported concerns into acceptance criteria deltas.
+3. Reproduce the bug/gap locally where possible.
+4. Delegate targeted fix work to `Frontend Developer` and/or `Backend Developer`.
+5. Delegate regression tests to `TDD Engineer`.
+6. Run `npm run lint` and `npm run test` locally.
+7. Delegate `Ops CI Engineer` to verify CI status and identify blockers.
+8. Update the existing PR branch with a concise fix summary and remaining risks.
+
 
 ## Code Standards
 - Keep frontend code in `src/` and tests in `tests/`.
