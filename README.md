@@ -102,6 +102,10 @@ This project uses a multi-agent development flow. Use the `Organizer` custom age
 9. Ops CI Engineer monitors quality gates
 10. Organizer opens PR
 
+**Prompt shortcuts:**
+- `/new-feature-flow`: Full feature delivery from intake to PR.
+- `/pr-bugfix-flow`: Post-PR correction loop when you checked out a PR branch and found bugs or quality gaps.
+
 See `docs/local-agent-mode.md` for detailed runbook.
 
 ## Feature Development Scripts

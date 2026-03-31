@@ -2,6 +2,7 @@
 
 ## Objective
 Provide one organizer/planner-led flow that drives a feature from prompt to approved PR with mandatory quality gates.
+Also support a correction loop for post-PR bugs or quality concerns without restarting intake.
 
 ## Agent Roles
 
@@ -36,9 +37,26 @@ Provide one organizer/planner-led flow that drives a feature from prompt to appr
    ./scripts/wait-quality-gates.ps1 -PullRequestNumber <pr-number>
    ```
 
+## Post-PR Correction Workflow
+
+Use this when a PR branch is checked out and you discover a bug or quality gap after `/new-feature-flow`.
+
+1. Start Organizer using `/pr-bugfix-flow` and describe concerns.
+2. Organizer converts concerns into acceptance criteria deltas.
+3. Reproduce issue and apply targeted fix on the current branch.
+4. Delegate test updates to TDD Engineer.
+5. Run local quality gates:
+   ```powershell
+   npm run lint
+   npm run test
+   ```
+6. Validate CI/check status before requesting merge.
+
 ## Feature Intake Options
 
 - Primary: ask Organizer agent directly in chat.
+- Prompt shortcut: `/new-feature-flow`.
+- Post-PR fix shortcut: `/pr-bugfix-flow`.
 - Optional automation: run GitHub workflow `Feature Intake` with `feature_prompt` input to auto-create an issue.
 
 ## Branching and Traceability Rules
