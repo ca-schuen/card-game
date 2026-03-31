@@ -8,6 +8,10 @@ const {
   calculateHandValue,
   countTrickPoints
 } = require('../src/gameRules');
+const {
+  getVisiblePlayer,
+  shouldShowBiddingControls
+} = require('../src/uiState');
 
 /**
  * Tests for Sauspiel Game Controller Logic
@@ -205,6 +209,17 @@ describe('Game State Management', () => {
     expect(scores[1]).toBe(1);
     expect(scores[2]).toBe(0);
     expect(scores[3]).toBe(0);
+  });
+
+  test('shows bidding controls for the active bidder in local play', () => {
+    expect(shouldShowBiddingControls('bidding', 1)).toBe(true);
+    expect(shouldShowBiddingControls('playing', 1)).toBe(false);
+  });
+
+  test('shows the active player hand during bidding and play', () => {
+    expect(getVisiblePlayer('bidding', 1, 0)).toBe(1);
+    expect(getVisiblePlayer('playing', 3, 0)).toBe(3);
+    expect(getVisiblePlayer('idle', 2, 0)).toBe(0);
   });
 });
 

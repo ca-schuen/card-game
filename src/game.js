@@ -2,7 +2,7 @@
  * Sauspiel Game Controller
  * Manages game state, player turns, and UI updates
  */
-/* global createLongDeck, dealCards, isTrump, GAME_TYPES, determineTrickWinner, countTrickPoints */
+/* global createLongDeck, dealCards, isTrump, GAME_TYPES, determineTrickWinner, countTrickPoints, getVisiblePlayer, shouldShowBiddingControls */
 
 class SauspielGame {
   constructor() {
@@ -91,11 +91,6 @@ class SauspielGame {
   playCard(cardIndex) {
     if (this.gamePhase !== 'playing') {
       this.showMessage('Not in playing phase!', 'error');
-      return;
-    }
-
-    if (this.currentPlayer !== this.getHumanPlayer()) {
-      this.showMessage('Wait for your turn!', 'error');
       return;
     }
 
@@ -248,8 +243,8 @@ class SauspielGame {
   /**
    * Get human player index (for now, always player 0)
    */
-  getHumanPlayer() {
-    return 0;
+  getVisiblePlayer() {
+    return getVisiblePlayer(this.gamePhase, this.currentPlayer, 0);
   }
 
   /**
@@ -275,8 +270,8 @@ class SauspielGame {
 
   updatePlayerHand() {
     const handContainer = document.getElementById('playerHand');
-    const humanPlayer = this.getHumanPlayer();
-    const hand = this.playerHands[humanPlayer] || [];
+    const visiblePlayer = this.getVisiblePlayer();
+    const hand = this.playerHands[visiblePlayer] || [];
 
     handContainer.innerHTML = '';
 
@@ -296,7 +291,7 @@ class SauspielGame {
       handContainer.appendChild(cardEl);
     });
 
-    document.getElementById('playerNumber').textContent = humanPlayer;
+    document.getElementById('playerNumber').textContent = visiblePlayer;
   }
 
   updateScores() {
@@ -338,12 +333,8 @@ class SauspielGame {
 
   updateBiddingButtons() {
     const biddingSection = document.getElementById('biddingSection');
-    const humanPlayer = this.getHumanPlayer();
 
-    if (
-      this.gamePhase === 'bidding' &&
-      this.currentPlayer === humanPlayer
-    ) {
+    if (shouldShowBiddingControls(this.gamePhase, this.currentPlayer)) {
       biddingSection.classList.remove('hidden');
     } else {
       biddingSection.classList.add('hidden');
