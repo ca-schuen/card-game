@@ -271,6 +271,11 @@ main {
   gap: 15px;
 }
 
+.player-hand.is-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .card {
   background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%);
   border: 2px solid #e2e8f0;
@@ -310,6 +315,21 @@ main {
   border-color: #667eea;
   background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.card.is-illegal {
+  border-color: #cbd5e0;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.card.is-illegal:hover {
+  border-color: #cbd5e0;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+  transform: none;
+  box-shadow: none;
 }
 
 .card.suit-heart::before {

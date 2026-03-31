@@ -9,7 +9,7 @@ Also support a correction loop for post-PR bugs or quality concerns without rest
 - Organizer: intake prompt, create issue, orchestrate all roles, open PR only when green.
 - Feature Planner: convert prompt to scoped plan and acceptance criteria.
 - Frontend Developer: implement browser-side game work in `src/`.
-- Backend Developer: implement Spring Boot work in `backend/` (when applicable).
+- Backend Developer: implement Spring Boot work in `backend/`.
 - TDD Engineer: create or update tests for all behavior changes.
 - Ops CI Engineer: maintain and validate lint/test pipeline and check status.
 
@@ -26,6 +26,7 @@ Also support a correction loop for post-PR bugs or quality concerns without rest
    ```powershell
    npm run lint
    npm run test
+   mvn -f backend/pom.xml verify
    ```
 6. Push branch and validate GitHub checks.
 7. Create pull request:
@@ -49,6 +50,7 @@ Use this when a PR branch is checked out and you discover a bug or quality gap a
    ```powershell
    npm run lint
    npm run test
+   mvn -f backend/pom.xml verify
    ```
 6. Validate CI/check status before requesting merge.
 
@@ -70,6 +72,6 @@ Use this when a PR branch is checked out and you discover a bug or quality gap a
 GitHub Actions in `.github/workflows/ci.yml` enforces:
 - Frontend lint.
 - Frontend tests.
-- Backend verify (auto-enabled when `backend/pom.xml` exists).
+- Backend verify.
 
 PRs should only be approved after all required checks pass.
