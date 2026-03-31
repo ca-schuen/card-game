@@ -51,7 +51,7 @@ jobs:
     needs:
       - frontend-quality
       - backend-quality
-    if: ${{ always() && needs.frontend-quality.result == 'success' && (needs.backend-quality.result == 'success' || needs.backend-quality.result == 'skipped') && hashFiles('backend/pom.xml') != '' }}
+    if: ${{ always() && needs['frontend-quality'].result == 'success' && (needs['backend-quality'].result == 'success' || needs['backend-quality'].result == 'skipped') && hashFiles('backend/pom.xml') != '' }}
     runs-on: ubuntu-latest
 
     steps:
