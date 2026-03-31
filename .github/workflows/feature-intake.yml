@@ -1,0 +1,51 @@
+name: Feature Intake
+
+on:
+  workflow_dispatch:
+    inputs:
+      feature_prompt:
+        description: Feature description
+        required: true
+        type: string
+      constraints:
+        description: Constraints or notes
+        required: false
+        type: string
+
+permissions:
+  issues: write
+
+jobs:
+  create-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create issue from intake
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `Feature: ${core.getInput('feature_prompt').slice(0, 80)}`;
+            const constraints = core.getInput('constraints') || 'None provided';
+            const body = [
+              '## Feature Request',
+              core.getInput('feature_prompt'),
+              '',
+              '## Constraints',
+              constraints,
+              '',
+              '## Delivery Checklist',
+              '- [ ] Plan created',
+              '- [ ] Implementation complete',
+              '- [ ] Tests added/updated',
+              '- [ ] CI quality gates passing',
+              '- [ ] PR opened'
+            ].join('\n');
+
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['feature']
+            });
+
+            core.notice(`Created issue #${issue.data.number}: ${issue.data.html_url}`);
