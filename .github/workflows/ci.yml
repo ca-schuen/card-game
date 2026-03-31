@@ -30,14 +30,26 @@ jobs:
         run: npm run test:ci
 
   backend-quality:
-    if: ${{ hashFiles('backend/pom.xml') != '' }}
     runs-on: ubuntu-latest
+    outputs:
+      has_backend: ${{ steps.backend-check.outputs.has_backend }}
 
     steps:
+      - name: Detect backend project
+        id: backend-check
+        run: |
+          if [ -f backend/pom.xml ]; then
+            echo "has_backend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_backend=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout
+        if: steps.backend-check.outputs.has_backend == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Java
+        if: steps.backend-check.outputs.has_backend == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -45,13 +57,18 @@ jobs:
           cache: maven
 
       - name: Verify backend
+        if: steps.backend-check.outputs.has_backend == 'true'
         run: mvn -f backend/pom.xml verify
+
+      - name: Backend not present
+        if: steps.backend-check.outputs.has_backend == 'false'
+        run: echo "Skipping backend verify because backend/pom.xml is missing"
 
   smoke-e2e:
     needs:
       - frontend-quality
       - backend-quality
-    if: ${{ always() && needs['frontend-quality'].result == 'success' && (needs['backend-quality'].result == 'success' || needs['backend-quality'].result == 'skipped') && hashFiles('backend/pom.xml') != '' }}
+    if: ${{ always() && needs['frontend-quality'].result == 'success' && needs['backend-quality'].result == 'success' && needs['backend-quality'].outputs.has_backend == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
