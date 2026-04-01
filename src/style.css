@@ -120,6 +120,12 @@ main {
   font-weight: 700;
 }
 
+.migration-helper {
+  margin-top: 8px;
+  font-size: 0.88rem;
+  color: #4a5568;
+}
+
 /* Trick Display */
 .trick-display {
   grid-column: 1 / -1;
@@ -165,18 +171,16 @@ main {
 }
 
 .trick-position .card {
-  width: 60px;
-  height: 80px;
+  width: 120px;
+  min-height: 80px;
   background: white;
   border: 2px solid #667eea;
   border-radius: 4px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  font-weight: bold;
-  font-size: 0.8rem;
-  cursor: pointer;
+  padding: 8px;
 }
 
 /* Scores */
@@ -267,7 +271,7 @@ main {
 
 .player-hand {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 15px;
 }
 
@@ -283,14 +287,15 @@ main {
   padding: 10px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  font-weight: bold;
-  font-size: 1rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
-  text-align: center;
-  min-height: 100px;
+  text-align: left;
+  min-height: 106px;
+  width: 100%;
+  gap: 6px;
 }
 
 .card:hover {
@@ -300,15 +305,37 @@ main {
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
 }
 
+.card-primary {
+  font-size: 0.98rem;
+  color: #1a202c;
+  line-height: 1.2;
+}
+
+.card-secondary {
+  font-size: 0.78rem;
+  color: #4a5568;
+  line-height: 1.2;
+}
+
 .card.playable {
   border-color: #48bb78;
   cursor: pointer;
   background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+  border-style: solid;
 }
 
 .card.playable:hover {
   border-color: #38a169;
   box-shadow: 0 10px 25px rgba(72, 187, 120, 0.3);
+}
+
+.card.playable::after {
+  content: attr(data-state-label);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #2f855a;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .card.selected {
@@ -317,39 +344,62 @@ main {
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
 }
 
+.card:disabled {
+  border-style: dashed;
+  border-color: #a0aec0;
+  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  cursor: not-allowed;
+  opacity: 0.9;
+}
+
 .card.is-illegal {
-  border-color: #cbd5e0;
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
-  opacity: 0.5;
+  border-style: dashed;
+  border-color: #a0aec0;
+  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  opacity: 0.9;
   cursor: not-allowed;
   pointer-events: none;
 }
 
 .card.is-illegal:hover {
-  border-color: #cbd5e0;
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+  border-color: #a0aec0;
+  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
   transform: none;
   box-shadow: none;
 }
 
-.card.suit-heart::before {
-  content: '♥';
-  color: #e53e3e;
+.card:disabled::after {
+  content: attr(data-state-label);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #4a5568;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
-.card.suit-spade::before {
-  content: '♠';
-  color: #1a202c;
+.card:focus-visible {
+  outline: 3px solid #2b6cb0;
+  outline-offset: 2px;
 }
 
-.card.suit-club::before {
-  content: '♣';
-  color: #1a202c;
+.card.suit-eichel {
+  border-left: 4px solid #975a16;
 }
 
-.card.suit-diamond::before {
-  content: '♦';
-  color: #e53e3e;
+.card.suit-gras {
+  border-left: 4px solid #2f855a;
+}
+
+.card.suit-herz {
+  border-left: 4px solid #c53030;
+}
+
+.card.suit-schellen {
+  border-left: 4px solid #b7791f;
+}
+
+.card.card-fallback {
+  border-color: #dd6b20;
 }
 
 /* Messages */
@@ -377,6 +427,38 @@ main {
   border-color: #667eea;
   color: #667eea;
   font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  main {
+    grid-template-columns: 1fr;
+    padding: 18px;
+    gap: 18px;
+  }
+
+  .player-hand {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .card,
+  .trick-position .card {
+    min-height: 94px;
+    width: 100%;
+    padding: 8px;
+  }
+
+  .card-primary {
+    font-size: 0.92rem;
+  }
+
+  .card-secondary {
+    font-size: 0.74rem;
+  }
+
+  .migration-helper {
+    font-size: 0.8rem;
+  }
 }
 
 .message-box.success {

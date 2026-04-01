@@ -13,6 +13,7 @@ class SauspielGame {
     this.playCardRequest = options.playCard || lookupGlobal('playCardRequest');
     this.newRoundRequest = options.newRound || lookupGlobal('newRoundRequest');
     this.revealBotCards = options.revealBotCards || lookupGlobal('revealBotCards');
+    this.cardPresentation = options.toCardPresentation || lookupGlobal('toCardPresentation');
     this.gameState = null;
     this.displayedTrick = [];
     this.gamePhase = 'idle';
@@ -300,18 +301,33 @@ class SauspielGame {
     handContainer.classList.toggle('is-disabled', this.gamePhase !== 'human-turn');
 
     hand.forEach((card, index) => {
-      const cardEl = this.createCardElement(card);
-      if (this.gamePhase === 'human-turn') {
-        // Check if this card is legal to play
-        if (this.isCardLegal(index)) {
-          cardEl.classList.add('playable');
-          cardEl.onclick = () => {
-            this.playCard(index);
-          };
-        } else {
-          // Mark illegal cards so they are visually disabled
-          cardEl.classList.add('is-illegal');
-        }
+      const isHumanTurn = this.gamePhase === 'human-turn';
+      const isPlayable = isHumanTurn && this.isCardLegal(index);
+      const cardEl = this.createCardElement(card, {
+        interactive: true,
+        playable: isPlayable
+      });
+
+      if (isPlayable) {
+        cardEl.onclick = () => {
+          this.playCard(index);
+        };
+      }
+
+      cardEl.disabled = !isPlayable;
+      if (typeof cardEl.setAttribute === 'function') {
+        cardEl.setAttribute('aria-disabled', String(!isPlayable));
+      } else {
+        cardEl['aria-disabled'] = String(!isPlayable);
+      }
+      if (!cardEl.dataset) {
+        cardEl.dataset = {};
+      }
+      cardEl.dataset.stateLabel = isPlayable ? 'Playable' : 'Not playable';
+
+      if (isHumanTurn && !isPlayable) {
+        cardEl.classList.add('is-illegal');
+        cardEl.title = 'Not playable right now';
       }
 
       handContainer.appendChild(cardEl);
@@ -372,7 +388,9 @@ class SauspielGame {
 
       const playedCard = this.displayedTrick.find((play) => this.getSeat(play) === seat);
       if (playedCard) {
-        position.appendChild(this.createCardElement(playedCard.card));
+        position.appendChild(
+          this.createCardElement(playedCard.card, { interactive: false })
+        );
       } else {
         const placeholder = this.document.createElement('div');
         placeholder.className = 'placeholder';
@@ -413,14 +431,69 @@ class SauspielGame {
     return legalIndices.includes(cardIndex);
   }
 
-  createCardElement(card) {
-    const el = this.document.createElement('div');
-    el.className = 'card';
-    const suitMap = { E: 'diamond', G: 'club', H: 'heart', S: 'spade' };
-    el.classList.add(`suit-${suitMap[card.suit]}`);
-    el.textContent = card.rank;
-    el.title = this.describeCard(card);
+  createCardElement(card, options = {}) {
+    const presentation = this.getCardPresentation(card);
+    const isInteractive = Boolean(options.interactive);
+    const el = this.document.createElement(isInteractive ? 'button' : 'div');
+
+    if (isInteractive) {
+      el.type = 'button';
+    }
+
+    el.className = `card ${presentation.semanticClass}`;
+
+    if (options.playable) {
+      el.classList.add('playable');
+    }
+
+    if (!presentation.isKnownCard) {
+      el.classList.add('card-fallback');
+    }
+
+    const primaryLine = this.document.createElement('span');
+    primaryLine.className = 'card-primary';
+    primaryLine.textContent = presentation.shortLabel;
+
+    const secondaryLine = this.document.createElement('span');
+    secondaryLine.className = 'card-secondary';
+    secondaryLine.textContent = presentation.ariaLabel;
+
+    el.appendChild(primaryLine);
+    el.appendChild(secondaryLine);
+
+    if (typeof el.setAttribute === 'function') {
+      el.setAttribute('aria-label', presentation.ariaLabel);
+      el.setAttribute('title', presentation.shortLabel);
+    } else {
+      el['aria-label'] = presentation.ariaLabel;
+      el.title = presentation.shortLabel;
+    }
+
     return el;
+  }
+
+  getCardPresentation(card) {
+    if (typeof this.cardPresentation === 'function') {
+      return this.cardPresentation(card);
+    }
+
+    const suitNames = {
+      E: 'Eichel',
+      G: 'Gras',
+      H: 'Herz',
+      S: 'Schellen'
+    };
+
+    const rankCode = typeof card?.rank === 'string' && card.rank ? card.rank : '?';
+    const suitCode = typeof card?.suit === 'string' && card.suit ? card.suit : '?';
+    const suitText = suitNames[suitCode] || suitCode;
+
+    return {
+      shortLabel: `${rankCode} ${suitText}`,
+      ariaLabel: `${rankCode} ${suitText}`,
+      semanticClass: 'suit-unknown',
+      isKnownCard: Boolean(suitNames[suitCode])
+    };
   }
 
   showMessage(text, type = 'info') {

@@ -10,9 +10,10 @@
     "smoke:ci": "node scripts/ci/smoke-runner.js"
   },
   "devDependencies": {
-    "eslint": "^9.24.0",
     "@eslint/js": "^9.24.0",
+    "eslint": "^9.24.0",
+    "globals": "^15.15.0",
     "jest": "^29.7.0",
-    "globals": "^15.15.0"
+    "jest-environment-jsdom": "^30.3.0"
   }
 }
