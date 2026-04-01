@@ -6,7 +6,8 @@
   "scripts": {
     "lint": "eslint src tests",
     "test": "jest --runInBand",
-    "test:ci": "jest --ci --coverage"
+    "test:ci": "jest --ci --coverage",
+    "smoke:ci": "node scripts/ci/smoke-runner.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.24.0",

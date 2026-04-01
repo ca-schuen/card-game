@@ -1,340 +1,400 @@
-/**
- * Sauspiel Game Controller
- * Manages game state, player turns, and UI updates
- */
-/* global createLongDeck, dealCards, isTrump, GAME_TYPES, determineTrickWinner, countTrickPoints, getVisiblePlayer, shouldShowBiddingControls, toCardPresentation */
+function lookupGlobal(name) {
+  if (typeof globalThis !== 'undefined' && globalThis[name]) {
+    return globalThis[name];
+  }
+
+  return undefined;
+}
 
 class SauspielGame {
-  constructor() {
-    this.players = 4;
+  constructor(options = {}) {
+    this.document = options.document || (typeof document !== 'undefined' ? document : null);
+    this.createGameRequest = options.createGame || lookupGlobal('createGame');
+    this.playCardRequest = options.playCard || lookupGlobal('playCardRequest');
+    this.newRoundRequest = options.newRound || lookupGlobal('newRoundRequest');
+    this.revealBotCards = options.revealBotCards || lookupGlobal('revealBotCards');
+    this.cardPresentation = options.toCardPresentation || lookupGlobal('toCardPresentation');
     this.gameState = null;
-    this.currentPlayer = 0;
-    this.scores = [0, 0, 0, 0];
-    this.roundScores = [0, 0, 0, 0];
-    this.currentTrick = [];
-    this.gamePhase = 'idle'; // idle, bidding, playing, trick-complete, round-complete
-    this.selectedCard = null;
-    this.playableCards = [];
-    this.dealer = 0;
-    this.leader = null;
-    this.tricks = [[], [], [], []]; // Track tricks won by each player
-    this.pointThreshold = 61;
-  }
-
-  /**
-   * Initialize a new game
-   */
-  newGame() {
-    this.gamePhase = 'bidding';
-    this.currentPlayer = (this.dealer + 1) % this.players;
-    this.currentTrick = [];
-    this.selectedCard = null;
-    this.playableCards = [];
-    this.leader = null;
-    this.tricks = [[], [], [], []];
-    this.roundScores = [0, 0, 0, 0];
-
-    // Create deck and deal cards
-    const deck = createLongDeck();
-    this.playerHands = dealCards(deck, this.players, 8);
-
-    this.updateUI();
-    this.showMessage('Bidding phase: Player ' + this.currentPlayer + ', do you bid?');
-  }
-
-  /**
-   * Handle bidding action
-   */
-  bid() {
-    if (this.gamePhase !== 'bidding') {
-      this.showMessage('Not in bidding phase!', 'error');
-      return;
-    }
-
-    this.gamePhase = 'playing';
-    this.leader = this.currentPlayer;
-    this.showMessage(`Player ${this.leader} declared Sauspiel! Game starts.`);
-    this.currentPlayer = (this.dealer + 1) % this.players;
-    this.updateUI();
-  }
-
-  /**
-   * Handle pass action during bidding
-   */
-  pass() {
-    if (this.gamePhase !== 'bidding') {
-      this.showMessage('Not in bidding phase!', 'error');
-      return;
-    }
-
-    this.currentPlayer = (this.currentPlayer + 1) % this.players;
-
-    // If all players pass (went around 4 times), reshuffle
-    if (this.currentPlayer === (this.dealer + 1) % this.players) {
-      this.dealer = (this.dealer + 1) % this.players;
-      this.showMessage(
-        'All players passed. New dealer: Player ' +
-          this.dealer +
-          '. Reshuffling...'
-      );
-      setTimeout(() => this.newGame(), 2000);
-      return;
-    }
-
-    this.showMessage('Player ' + this.currentPlayer + ', your turn to bid.');
-    this.updateUI();
-  }
-
-  /**
-   * Play a card from hand
-   */
-  playCard(cardIndex) {
-    if (this.gamePhase !== 'playing') {
-      this.showMessage('Not in playing phase!', 'error');
-      return;
-    }
-
-    const card = this.playerHands[this.currentPlayer][cardIndex];
-    if (!card) {
-      this.showMessage('Invalid card!', 'error');
-      return;
-    }
-
-    // Check if card is playable
-    if (!this.isCardPlayable(card)) {
-      this.showMessage('Invalid card! Follow suit or play trump.', 'error');
-      return;
-    }
-
-    // Add to trick
-    this.currentTrick.push({ player: this.currentPlayer, card });
-    this.playerHands[this.currentPlayer].splice(cardIndex, 1);
-
-    if (this.currentTrick.length === 4) {
-      // Trick is complete
-      this.resolveTrick();
-    } else {
-      // Next player
-      this.currentPlayer = (this.currentPlayer + 1) % this.players;
-      this.showMessage('Player ' + this.currentPlayer + "'s turn.");
-    }
-
-    this.updateUI();
-  }
-
-  /**
-   * Check if a card is playable
-   */
-  isCardPlayable(card) {
-    if (this.currentTrick.length === 0) {
-      return true; // First player can play any card
-    }
-
-    const leadCard = this.currentTrick[0].card;
-    const leadSuit = leadCard.suit;
-    const hand = this.playerHands[this.currentPlayer];
-
-    // Check if player has lead suit
-    const hasSuit = hand.some((c) => c.suit === leadSuit);
-    if (hasSuit) {
-      return card.suit === leadSuit;
-    }
-
-    // Check if player has trump
-    const hasTrump = hand.some(
-      (c) =>
-        c.rank === 'O' ||
-        c.rank === 'U' ||
-        (c.suit === 'H' && isTrump(c, GAME_TYPES.SAUSPIEL))
-    );
-    if (hasTrump) {
-      return isTrump(card, GAME_TYPES.SAUSPIEL);
-    }
-
-    // No suit constraint, can play any card
-    return true;
-  }
-
-  /**
-   * Resolve a completed trick
-   */
-  resolveTrick() {
-    const winner = determineTrickWinner(this.currentTrick, GAME_TYPES.SAUSPIEL);
-    const points = countTrickPoints(this.currentTrick);
-
-    this.roundScores[winner] += points;
-    this.tricks[winner].push(...this.currentTrick);
-
-    this.showMessage(`Player ${winner} wins the trick (+${points} points)!`);
-
-    // Check if round is over (8 tricks total)
-    if (
-      this.tricks[0].length +
-        this.tricks[1].length +
-        this.tricks[2].length +
-        this.tricks[3].length ===
-      8
-    ) {
-      this.resolveRound();
-    } else {
-      this.currentPlayer = winner;
-      this.currentTrick = [];
-      this.selectedCard = null;
-      this.playableCards = [];
-      setTimeout(() => {
-        this.updateUI();
-        this.showMessage('Player ' + this.currentPlayer + "'s turn.");
-      }, 1500);
-    }
-  }
-
-  /**
-   * Resolve end of round
-   */
-  resolveRound() {
-    // Calculate round winner (who has 61+ points)
-    const leaderPoints = this.roundScores[this.leader];
-
-    const opponentPoints =
-      this.roundScores[0] +
-      this.roundScores[1] +
-      this.roundScores[2] +
-      this.roundScores[3] -
-      this.roundScores[this.leader];
-
-    // Award points to team
-    if (leaderPoints >= this.pointThreshold) {
-      this.scores[this.leader] += 1;
-      this.showMessage(
-        `Player ${this.leader}'s team wins this round! (${leaderPoints} points)`
-      );
-    } else {
-      this.scores[(this.leader + 1) % this.players] += 1;
-      this.showMessage(
-        `Opposing team wins this round! (${opponentPoints} points)`
-      );
-    }
-
-    // Check for overall winner
-    if (Math.max(...this.scores) >= 3) {
-      this.resolveGame();
-    } else {
-      this.gamePhase = 'round-complete';
-      this.dealer = (this.dealer + 1) % this.players;
-      setTimeout(() => {
-        this.newGame();
-      }, 2000);
-    }
-  }
-
-  /**
-   * Resolve end of game
-   */
-  resolveGame() {
-    const winner = this.scores.indexOf(Math.max(...this.scores));
-    this.showMessage(
-      `🎉 Game Over! Player ${winner} wins!`,
-      'success'
-    );
+    this.displayedTrick = [];
     this.gamePhase = 'idle';
+  }
+
+  async newGame() {
+    if (this.gameState && this.gameState.roundComplete && this.newRoundRequest) {
+      return this.startNextRound();
+    }
+
+    return this.startNewGame('sauspiel', null);
+  }
+
+  async startNewGame(gameType = 'sauspiel', soloSuit = null) {
+    this.gamePhase = 'game-creating';
+    this.displayedTrick = [];
+    this.updateUI();
+    this.showMessage('Creating backend game...', 'info');
+
+    try {
+      const state = await this.requireFunction(this.createGameRequest, 'createGame')(gameType, soloSuit);
+      this.applyServerState(state);
+      this.showTurnMessage();
+    } catch (error) {
+      this.handleError(error, 'Could not create a new game.');
+    }
+  }
+
+  async startNextRound() {
+    if (!this.gameState) {
+      return this.startNewGame('sauspiel', null);
+    }
+
+    this.gamePhase = 'game-creating';
+    this.displayedTrick = [];
+    this.updateUI();
+    this.showMessage('Starting the next round...', 'info');
+
+    try {
+      const state = await this.requireFunction(this.newRoundRequest, 'newRound')(this.gameState.sessionId);
+      this.applyServerState(state);
+      this.showTurnMessage();
+    } catch (error) {
+      this.handleError(error, 'Could not start the next round.');
+    }
+  }
+
+  async playCard(cardIndex) {
+    if (!this.gameState || !this.gameState.humanTurn || this.gamePhase !== 'human-turn') {
+      this.showMessage('Wait for your turn before playing a card.', 'error');
+      return;
+    }
+
+    const card = this.gameState.humanHand[cardIndex];
+    if (!card) {
+      this.showMessage('Invalid card.', 'error');
+      return;
+    }
+
+    // Check if the card is legal to play
+    if (!this.isCardLegal(cardIndex)) {
+      this.showMessage('You cannot play this card. Follow the suit if possible.', 'error');
+      return;
+    }
+
+    const humanSeat = this.gameState.humanSeat;
+    const previousState = this.gameState;
+    this.gamePhase = 'submitting';
+    this.displayedTrick = [...(previousState.currentTrick || []), { seat: humanSeat, card }];
+    this.updateUI();
+    this.showMessage(`You played ${this.describeCard(card)}. Waiting for bots...`, 'info');
+
+    try {
+      const nextState = await this.requireFunction(this.playCardRequest, 'playCard')(
+        previousState.sessionId,
+        cardIndex
+      );
+      const resolvedTrick = this.getLatestResolvedTrick(previousState, nextState);
+
+      if (resolvedTrick) {
+        this.gamePhase = 'bots-resolving';
+        this.displayedTrick = resolvedTrick.filter((play) => this.getSeat(play) === humanSeat);
+        this.updateUI();
+
+        await this.requireFunction(this.revealBotCards, 'revealBotCards')(
+          resolvedTrick,
+          humanSeat,
+          (play) => {
+            this.upsertDisplayedPlay(play);
+            this.updateTrick();
+            this.showMessage(
+              `${this.getSeatLabel(this.getSeat(play))} played ${this.describeCard(play.card)}.`,
+              'info'
+            );
+          }
+        );
+      }
+
+      this.applyServerState(nextState, resolvedTrick);
+      this.showTurnMessage();
+    } catch (error) {
+      this.gameState = previousState;
+      this.displayedTrick = previousState.currentTrick ? [...previousState.currentTrick] : [];
+      this.handleError(error, 'Could not play the selected card.');
+    }
+  }
+
+  requireFunction(fn, name) {
+    if (typeof fn !== 'function') {
+      throw new Error(`${name} is not available in the browser context`);
+    }
+
+    return fn;
+  }
+
+  applyServerState(state, resolvedTrick = null) {
+    this.gameState = state;
+
+    if (Array.isArray(state.currentTrick) && state.currentTrick.length > 0) {
+      this.displayedTrick = [...state.currentTrick];
+    } else if (resolvedTrick && resolvedTrick.length > 0) {
+      this.displayedTrick = [...resolvedTrick];
+    } else {
+      this.displayedTrick = [];
+    }
+
+    if (state.roundComplete) {
+      this.gamePhase = 'round-complete';
+    } else if (state.humanTurn) {
+      this.gamePhase = 'human-turn';
+    } else {
+      this.gamePhase = 'bots-resolving';
+    }
+
     this.updateUI();
   }
 
-  /**
-   * Get human player index (for now, always player 0)
-   */
-  getVisiblePlayer() {
-    return getVisiblePlayer(this.gamePhase, this.currentPlayer, 0);
+  getLatestResolvedTrick(previousState, nextState) {
+    const previousCount = previousState?.completedTricks?.length || 0;
+    const completedTricks = Array.isArray(nextState.completedTricks) ? nextState.completedTricks : [];
+
+    if (completedTricks.length > previousCount) {
+      return completedTricks[completedTricks.length - 1];
+    }
+
+    return null;
   }
 
-  /**
-   * Update all UI elements
-   */
+  getSeat(play) {
+    if (typeof play?.seat === 'number') {
+      return play.seat;
+    }
+
+    return play?.player;
+  }
+
+  upsertDisplayedPlay(play) {
+    const seat = this.getSeat(play);
+    const existingIndex = this.displayedTrick.findIndex(
+      (currentPlay) => this.getSeat(currentPlay) === seat
+    );
+
+    if (existingIndex >= 0) {
+      this.displayedTrick[existingIndex] = play;
+      return;
+    }
+
+    this.displayedTrick.push(play);
+  }
+
+  getSeatLabel(seat) {
+    if (seat === 0) {
+      return 'You';
+    }
+
+    return `Bot ${seat}`;
+  }
+
+  describeCard(card) {
+    const suitNames = {
+      E: 'Eichel',
+      G: 'Gras',
+      H: 'Herz',
+      S: 'Schellen'
+    };
+
+    return `${card.rank} of ${suitNames[card.suit] || card.suit}`;
+  }
+
+  getPhaseLabel() {
+    const labels = {
+      idle: 'Idle',
+      'game-creating': 'Creating Game',
+      'human-turn': 'Your Turn',
+      submitting: 'Submitting Move',
+      'bots-resolving': 'Bots Playing',
+      'round-complete': 'Round Complete',
+      error: 'Error'
+    };
+
+    return labels[this.gamePhase] || 'Playing';
+  }
+
+  showTurnMessage() {
+    if (!this.gameState) {
+      this.showMessage('Welcome to Sauspiel! Click "New Game" to start.', 'info');
+      return;
+    }
+
+    if (this.gameState.roundComplete) {
+      const winnerLabel = this.gameState.winner === 'team' ? 'Your team' : 'The bots';
+      this.showMessage(
+        `${winnerLabel} won the round. Click "New Game" to continue.`,
+        'success'
+      );
+      return;
+    }
+
+    if (this.gameState.humanTurn) {
+      this.showMessage('Your turn. Pick one card and the bots will respond automatically.', 'info');
+      return;
+    }
+
+    this.showMessage('Waiting for bot actions...', 'info');
+  }
+
+  handleError(error, fallbackMessage) {
+    this.gamePhase = 'error';
+    this.updateUI();
+
+    if (error && error.status === 0) {
+      this.showMessage(
+        'Could not reach the backend. Start the Spring Boot server and open this page via http://localhost:5500 or http://localhost:3000.',
+        'error'
+      );
+      return;
+    }
+
+    this.showMessage(error?.message || fallbackMessage, 'error');
+  }
+
   updateUI() {
+    if (!this.document) {
+      return;
+    }
+
     this.updateDealer();
     this.updatePhase();
     this.updatePlayerHand();
     this.updateScores();
     this.updateTrick();
-    this.updateBiddingButtons();
+    this.updateControls();
   }
 
   updateDealer() {
-    document.getElementById('dealerDisplay').textContent = 'Player ' + this.dealer;
+    const dealerDisplay = this.document.getElementById('dealerDisplay');
+    if (!dealerDisplay) {
+      return;
+    }
+
+    if (!this.gameState) {
+      dealerDisplay.textContent = '—';
+      return;
+    }
+
+    dealerDisplay.textContent = this.getSeatLabel(this.gameState.leadSeat);
   }
 
   updatePhase() {
-    const phaseDisplay = this.gamePhase === 'bidding' ? 'Bidding' : 'Playing';
-    document.getElementById('phaseDisplay').textContent = phaseDisplay;
+    const phaseDisplay = this.document.getElementById('phaseDisplay');
+    if (phaseDisplay) {
+      phaseDisplay.textContent = this.getPhaseLabel();
+    }
   }
 
   updatePlayerHand() {
-    const handContainer = document.getElementById('playerHand');
-    const visiblePlayer = this.getVisiblePlayer();
-    const hand = this.playerHands[visiblePlayer] || [];
+    const handContainer = this.document.getElementById('playerHand');
+    const playerNumber = this.document.getElementById('playerNumber');
+    if (!handContainer) {
+      return;
+    }
 
+    const hand = this.gameState?.humanHand || [];
     handContainer.innerHTML = '';
+    handContainer.classList.toggle('is-disabled', this.gamePhase !== 'human-turn');
 
     hand.forEach((card, index) => {
-      const isPlayingPhase = this.gamePhase === 'playing';
-      const isPlayable = isPlayingPhase && this.isCardPlayable(card);
+      const isHumanTurn = this.gamePhase === 'human-turn';
+      const isPlayable = isHumanTurn && this.isCardLegal(index);
       const cardEl = this.createCardElement(card, {
         interactive: true,
         playable: isPlayable
       });
 
-      cardEl.onclick = () => {
-        if (isPlayable) {
+      if (isPlayable) {
+        cardEl.onclick = () => {
           this.playCard(index);
-        }
-      };
+        };
+      }
 
       cardEl.disabled = !isPlayable;
-      cardEl.setAttribute('aria-disabled', String(!isPlayable));
+      if (typeof cardEl.setAttribute === 'function') {
+        cardEl.setAttribute('aria-disabled', String(!isPlayable));
+      } else {
+        cardEl['aria-disabled'] = String(!isPlayable);
+      }
+      if (!cardEl.dataset) {
+        cardEl.dataset = {};
+      }
       cardEl.dataset.stateLabel = isPlayable ? 'Playable' : 'Not playable';
 
-      if (!isPlayable) {
+      if (isHumanTurn && !isPlayable) {
+        cardEl.classList.add('is-illegal');
         cardEl.title = 'Not playable right now';
       }
 
       handContainer.appendChild(cardEl);
     });
 
-    document.getElementById('playerNumber').textContent = visiblePlayer;
-  }
-
-  updateScores() {
-    for (let i = 0; i < this.players; i++) {
-      const scoreEl = document.getElementById('score-' + i);
-      const scoreValue = scoreEl.querySelector('.player-score');
-      scoreValue.textContent = this.scores[i];
-
-      if (i === this.currentPlayer && this.gamePhase === 'bidding') {
-        scoreEl.classList.add('active-player');
-      } else {
-        scoreEl.classList.remove('active-player');
-      }
+    if (playerNumber) {
+      playerNumber.textContent = 'You';
     }
   }
 
+  updateScores() {
+    const rows = [
+      { label: 'You', value: this.gameState ? this.gameState.scores.team : '—' },
+      { label: 'Bots', value: this.gameState ? this.gameState.scores.opponents : '—' },
+      {
+        label: 'Tricks',
+        value: this.gameState ? `${this.gameState.trickCount}/8` : '—'
+      },
+      {
+        label: 'Lead',
+        value: this.gameState ? this.getSeatLabel(this.gameState.leadSeat) : '—'
+      }
+    ];
+
+    rows.forEach((row, index) => {
+      const scoreEl = this.document.getElementById(`score-${index}`);
+      if (!scoreEl) {
+        return;
+      }
+
+      const nameEl = scoreEl.querySelector('.player-name');
+      const valueEl = scoreEl.querySelector('.player-score');
+      if (nameEl) {
+        nameEl.textContent = row.label;
+      }
+      if (valueEl) {
+        valueEl.textContent = row.value;
+      }
+      scoreEl.classList.toggle(
+        'active-player',
+        Boolean(this.gameState) && row.label === this.getSeatLabel(this.gameState.leadSeat)
+      );
+    });
+  }
+
   updateTrick() {
-    const trickContainer = document.getElementById('trickCards');
+    const trickContainer = this.document.getElementById('trickCards');
+    if (!trickContainer) {
+      return;
+    }
+
     trickContainer.innerHTML = '';
 
-    for (let i = 0; i < 4; i++) {
-      const position = document.createElement('div');
+    for (let seat = 0; seat < 4; seat += 1) {
+      const position = this.document.createElement('div');
       position.className = 'trick-position';
-      position.id = 'trick-' + i;
+      position.id = `trick-${seat}`;
 
-      const playedCard = this.currentTrick.find((play) => play.player === i);
+      const playedCard = this.displayedTrick.find((play) => this.getSeat(play) === seat);
       if (playedCard) {
         position.appendChild(
           this.createCardElement(playedCard.card, { interactive: false })
         );
       } else {
-        const placeholder = document.createElement('div');
+        const placeholder = this.document.createElement('div');
         placeholder.className = 'placeholder';
-        placeholder.textContent = 'Player ' + i;
+        placeholder.textContent = this.getSeatLabel(seat);
         position.appendChild(placeholder);
       }
 
@@ -342,29 +402,45 @@ class SauspielGame {
     }
   }
 
-  updateBiddingButtons() {
-    const biddingSection = document.getElementById('biddingSection');
+  updateControls() {
+    const biddingSection = this.document.getElementById('biddingSection');
+    const newGameBtn = this.document.getElementById('newGameBtn');
 
-    if (shouldShowBiddingControls(this.gamePhase, this.currentPlayer)) {
-      biddingSection.classList.remove('hidden');
-    } else {
+    if (biddingSection) {
       biddingSection.classList.add('hidden');
+    }
+
+    if (newGameBtn) {
+      newGameBtn.textContent =
+        this.gameState && this.gameState.roundComplete ? 'Next Round' : 'New Game';
     }
   }
 
-  /**
-   * Create a card element
-   */
-  createCardElement(card, options = {}) {
-    const presentation = toCardPresentation(card);
-    const isInteractive = Boolean(options.interactive);
+  isCardLegal(cardIndex) {
+    // If legalCardIndices is not available, treat all cards as legal (on not human's turn)
+    if (!this.gameState || !this.gameState.humanTurn) {
+      return true;
+    }
 
-    const el = document.createElement(isInteractive ? 'button' : 'div');
+    const legalIndices = this.gameState.legalCardIndices;
+    if (!Array.isArray(legalIndices) || legalIndices.length === 0) {
+      // No restrictions, all cards are legal
+      return true;
+    }
+
+    return legalIndices.includes(cardIndex);
+  }
+
+  createCardElement(card, options = {}) {
+    const presentation = this.getCardPresentation(card);
+    const isInteractive = Boolean(options.interactive);
+    const el = this.document.createElement(isInteractive ? 'button' : 'div');
+
     if (isInteractive) {
       el.type = 'button';
     }
 
-    el.className = 'card ' + presentation.semanticClass;
+    el.className = `card ${presentation.semanticClass}`;
 
     if (options.playable) {
       el.classList.add('playable');
@@ -374,50 +450,122 @@ class SauspielGame {
       el.classList.add('card-fallback');
     }
 
-    const primaryLine = document.createElement('span');
+    const primaryLine = this.document.createElement('span');
     primaryLine.className = 'card-primary';
     primaryLine.textContent = presentation.shortLabel;
 
-    const secondaryLine = document.createElement('span');
+    const secondaryLine = this.document.createElement('span');
     secondaryLine.className = 'card-secondary';
     secondaryLine.textContent = presentation.ariaLabel;
 
     el.appendChild(primaryLine);
     el.appendChild(secondaryLine);
 
-    el.setAttribute('aria-label', presentation.ariaLabel);
-    el.setAttribute('title', presentation.shortLabel);
+    if (typeof el.setAttribute === 'function') {
+      el.setAttribute('aria-label', presentation.ariaLabel);
+      el.setAttribute('title', presentation.shortLabel);
+    } else {
+      el['aria-label'] = presentation.ariaLabel;
+      el.title = presentation.shortLabel;
+    }
 
     return el;
   }
 
-  /**
-   * Show game message
-   */
+  getCardPresentation(card) {
+    if (typeof this.cardPresentation === 'function') {
+      return this.cardPresentation(card);
+    }
+
+    const suitNames = {
+      E: 'Eichel',
+      G: 'Gras',
+      H: 'Herz',
+      S: 'Schellen'
+    };
+
+    const rankCode = typeof card?.rank === 'string' && card.rank ? card.rank : '?';
+    const suitCode = typeof card?.suit === 'string' && card.suit ? card.suit : '?';
+    const suitText = suitNames[suitCode] || suitCode;
+
+    return {
+      shortLabel: `${rankCode} ${suitText}`,
+      ariaLabel: `${rankCode} ${suitText}`,
+      semanticClass: 'suit-unknown',
+      isKnownCard: Boolean(suitNames[suitCode])
+    };
+  }
+
   showMessage(text, type = 'info') {
-    const messageBox = document.getElementById('messageBox');
+    if (!this.document) {
+      return;
+    }
+
+    const messageBox = this.document.getElementById('messageBox');
+    if (!messageBox) {
+      return;
+    }
+
     messageBox.textContent = text;
-    messageBox.className = 'message-box ' + type;
+    messageBox.className = `message-box ${type}`;
+  }
+
+  bindUI() {
+    if (!this.document) {
+      return;
+    }
+
+    const newGameBtn = this.document.getElementById('newGameBtn');
+    const bidBtn = this.document.getElementById('bidBtn');
+    const passBtn = this.document.getElementById('passBtn');
+
+    if (newGameBtn) {
+      newGameBtn.addEventListener('click', () => {
+        this.newGame();
+      });
+    }
+
+    if (bidBtn) {
+      bidBtn.addEventListener('click', () => {
+        this.showMessage('Bidding is handled by the backend flow for this build.', 'info');
+      });
+    }
+
+    if (passBtn) {
+      passBtn.addEventListener('click', () => {
+        this.showMessage('Use "New Game" to start a backend session.', 'info');
+      });
+    }
   }
 }
 
-// Initialize game controller
-const game = new SauspielGame();
+function initializeSauspielGame(doc = typeof document !== 'undefined' ? document : null) {
+  const game = new SauspielGame({ document: doc });
+  game.bindUI();
+  game.showTurnMessage();
+  return game;
+}
 
-// Event listeners
-document.getElementById('newGameBtn').addEventListener('click', () => {
-  game.newGame();
-});
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    SauspielGame,
+    initializeSauspielGame
+  };
+}
 
-document.getElementById('bidBtn').addEventListener('click', () => {
-  game.bid();
-});
+if (typeof window !== 'undefined') {
+  window.SauspielGame = SauspielGame;
+  window.initializeSauspielGame = initializeSauspielGame;
+}
 
-document.getElementById('passBtn').addEventListener('click', () => {
-  game.pass();
-});
-
-// Show welcome message on load
-document.addEventListener('DOMContentLoaded', () => {
-  game.showMessage('Welcome to Sauspiel! Click "New Game" to start.');
-});
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!window.__SAUSPIEL_GAME__) {
+        window.__SAUSPIEL_GAME__ = initializeSauspielGame(document);
+      }
+    });
+  } else if (typeof window !== 'undefined' && !window.__SAUSPIEL_GAME__) {
+    window.__SAUSPIEL_GAME__ = initializeSauspielGame(document);
+  }
+}

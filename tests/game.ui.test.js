@@ -27,16 +27,10 @@ function buildGameDom() {
 }
 
 function installGameGlobals() {
-  global.createLongDeck = jest.fn(() => []);
-  global.dealCards = jest.fn(() => [[], [], [], []]);
-  global.isTrump = jest.fn((card) => card.suit === 'H' || card.rank === 'O' || card.rank === 'U');
-  global.GAME_TYPES = { SAUSPIEL: 'SAUSPIEL' };
-  global.determineTrickWinner = jest.fn(() => 0);
-  global.countTrickPoints = jest.fn(() => 0);
-  global.getVisiblePlayer = jest.fn((phase, currentPlayer, fallbackPlayer) =>
-    phase === 'idle' ? fallbackPlayer : currentPlayer
-  );
-  global.shouldShowBiddingControls = jest.fn(() => false);
+  global.createGame = jest.fn();
+  global.playCardRequest = jest.fn();
+  global.newRoundRequest = jest.fn();
+  global.revealBotCards = jest.fn();
   global.toCardPresentation = toCardPresentation;
 }
 
@@ -62,22 +56,19 @@ beforeEach(() => {
 describe('UI text-first card rendering', () => {
   test('renders rank+suit text in the hand area', () => {
     const game = new SauspielGame();
-    game.gamePhase = 'playing';
-    game.currentPlayer = 0;
-    game.playerHands = [
-      [
+    game.gamePhase = 'human-turn';
+    game.gameState = {
+      humanTurn: true,
+      legalCardIndices: [0, 1],
+      humanHand: [
         { suit: 'E', rank: 'A' },
         { suit: 'G', rank: '10' }
-      ],
-      [],
-      [],
-      []
-    ];
-    game.currentTrick = [];
+      ]
+    };
 
     game.updatePlayerHand();
 
-    const cards = Array.from(document.querySelectorAll('#playerHand .card'));
+    const cards = Array.from(document.querySelectorAll('#playerHand button.card'));
     expect(cards).toHaveLength(2);
 
     expect(cards[0].querySelector('.card-primary').textContent).toBe('A Eichel');
@@ -89,7 +80,7 @@ describe('UI text-first card rendering', () => {
 
   test('renders rank+suit text in trick positions', () => {
     const game = new SauspielGame();
-    game.currentTrick = [{ player: 1, card: { suit: 'H', rank: 'K' } }];
+    game.displayedTrick = [{ seat: 1, card: { suit: 'H', rank: 'K' } }];
 
     game.updateTrick();
 
@@ -98,23 +89,20 @@ describe('UI text-first card rendering', () => {
     expect(played.querySelector('.card-primary').textContent).toBe('K Herz');
     expect(played.querySelector('.card-secondary').textContent).toBe('Koenig Herz');
 
-    expect(document.querySelector('#trick-0 .placeholder').textContent).toBe('Player 0');
+    expect(document.querySelector('#trick-0 .placeholder').textContent).toBe('You');
   });
 
   test('keeps disabled/playable semantics for non-playable cards', () => {
     const game = new SauspielGame();
-    game.gamePhase = 'playing';
-    game.currentPlayer = 0;
-    game.playerHands = [
-      [
+    game.gamePhase = 'human-turn';
+    game.gameState = {
+      humanTurn: true,
+      legalCardIndices: [0],
+      humanHand: [
         { suit: 'E', rank: 'A' },
         { suit: 'G', rank: 'A' }
-      ],
-      [],
-      [],
-      []
-    ];
-    game.currentTrick = [{ player: 2, card: { suit: 'E', rank: 'K' } }];
+      ]
+    };
 
     game.updatePlayerHand();
 

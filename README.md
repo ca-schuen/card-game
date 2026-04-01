@@ -36,9 +36,18 @@ Open `index.html` in a web browser and follow the on-screen prompts:
 This repository is prepared for a local multi-agent development flow with:
 - Frontend card game code in `src/`
 - Tests in `tests/`
-- Future Spring Boot backend in `backend/`
+- Spring Boot bot-player backend in `backend/`
+- Dynamic smoke CI helpers in `scripts/ci/`
 - CI quality gates in GitHub Actions
 - Custom Copilot agents for organized feature delivery
+
+## Bot Player
+
+The game now supports one human player and three bot players.
+
+- Human player: seat 0 (UI-controlled)
+- Bot players: seats 1-3 (server-controlled via heuristic strategy)
+- Bot behavior is resolved by the backend and synced back to the frontend game state
 
 ## Local Development Setup
 
@@ -48,6 +57,25 @@ npm run lint     # Check code style
 npm run test     # Run unit tests
 npm run test:ci  # Run tests with coverage report
 ```
+
+### Backend Setup
+
+Start the Spring Boot backend in dev mode:
+
+```powershell
+mvn -f backend/pom.xml spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+The backend runs with CORS configured for localhost development.
+
+### API Quick Reference
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/games` | Create a new game session (human + bots) |
+| GET | `/api/games/{id}` | Get current game state by session ID |
+| POST | `/api/games/{id}/play` | Play a card for the active seat and resolve bot turns |
+| POST | `/api/games/{id}/new-round` | Start a new round using the existing session |
 
 ### Running the Game
 
@@ -82,21 +110,31 @@ card-game/
 │   ├── gameRules.js        # Core game logic (32-card deck, rules, scoring)
 │   ├── cardPresentation.js # Card presentation mapping (German suit/rank labels + aria text)
 │   ├── game.js             # Game controller (UI binding, state management)
+│   ├── apiClient.js        # Backend API client (create/get/play/new-round)
+│   ├── botOrchestrator.js  # Bot reveal/turn animation sequencer
 │   └── style.css           # Game UI styling
+├── backend/
+│   ├── src/main/java/      # Spring Boot REST API + bot strategy + session store
+│   └── src/test/java/      # Backend unit and slice tests
 ├── tests/
 │   ├── cardPresentation.test.js # Unit tests for presentation mapping
 │   ├── gameRules.test.js   # Unit tests for game rules
-│   └── game.test.js        # Integration tests for game controller
+│   ├── game.test.js        # Integration tests for game controller
+│   ├── apiClient.test.js   # API client behavior tests
+│   └── botOrchestrator.test.js # Bot animation sequencing tests
 ├── scripts/
 │   ├── feature-orchestrator.ps1    # Create feature branch and issue
 │   ├── create-pr.ps1               # Open pull request
-│   └── wait-quality-gates.ps1      # Monitor CI status
+│   ├── wait-quality-gates.ps1      # Monitor CI status
+│   └── ci/                         # Smoke CI helpers and policy
 ├── docs/
 │   ├── local-agent-mode.md         # Multi-agent workflow guide
 │   ├── architecture-german-altenburg-text-cards.md # Architecture notes for text-first cards
 │   ├── task-plan-german-altenburg-text-cards.md    # Delivery plan for Issue #13
 │   └── ux/
 │       ├── README.md               # UX brief conventions
+│       └── german-altenburg-text-cards-ux-brief.md # UX brief for Issue #13
+│       ├── dynamic-ci-smoke-tests-ux-brief.md  # UX design documentation for smoke tests
 │       └── german-altenburg-text-cards-ux-brief.md # UX brief for Issue #13
 └── .github/
     ├── agents/                     # Custom CodeLM agents
@@ -144,10 +182,41 @@ scripts/create-pr.ps1 -Issue <issue-number> -Title "<pr-title>"
 scripts/wait-quality-gates.ps1 -PullRequestNumber <pr-number>
 ```
 
+### Smoke CI Scripts
+
+- `scripts/ci/healthcheck.js`: Waits for backend health and writes `artifacts/smoke/healthcheck.json`.
+- `scripts/ci/play-two-games.js`: Runs game simulation calls against backend endpoints and records diagnostics.
+- `scripts/ci/smoke-runner.js`: Orchestrates smoke validation and enforces expected/unexpected error gates.
+- `scripts/ci/expected-errors.policy.json`: Policy contract for allowed statuses/message patterns and required pass/error thresholds.
+
 ## Continuous Integration
 
 **CI Pipeline** (`.github/workflows/ci.yml`):
 - ✅ Frontend: ESLint + Jest tests
-- ✅ Backend (when `backend/pom.xml` exists): Maven verify
+- ✅ Backend: Maven verify (`mvn -f backend/pom.xml verify`)
+- ✅ Dynamic smoke job (`smoke-e2e`) runs after quality gates when backend project is detected
 - ✅ Code coverage and quality gates
+
+### Dynamic Smoke CI Flow (Issue #11)
+
+The `smoke-e2e` job is a lightweight runtime check that:
+1. Boots backend and frontend services.
+2. Waits for backend health (`Wait for health` phase).
+3. Runs 2 game simulations (`Run game 1` and `Run game 2`).
+4. Validates expected errors using `scripts/ci/expected-errors.policy.json`.
+5. Fails on unexpected errors and publishes a smoke summary artifact.
+
+The smoke job remains backend-aware and executes when the backend project is present.
+
+### Run Smoke Locally
+
+Start backend and frontend (same as CI intent), then run:
+
+```powershell
+npm run smoke:ci
+```
+
+`npm run smoke:ci` runs `scripts/ci/smoke-runner.js`, which performs healthcheck, executes two games, and enforces expected/unexpected error gating from `scripts/ci/expected-errors.policy.json`.
+
+Current automated coverage includes 54 JavaScript tests and 27 Java tests.
 

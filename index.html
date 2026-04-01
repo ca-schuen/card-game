@@ -76,7 +76,7 @@
           <div class="hand-header">
             <h2>Your Hand</h2>
             <div id="currentPlayerDisplay" class="current-player">
-              (Player <span id="playerNumber">—</span>)
+              (<span id="playerNumber">You</span>)
             </div>
           </div>
           <div id="playerHand" class="player-hand">
@@ -86,7 +86,7 @@
 
         <!-- Game Messages Section -->
         <section class="game-messages">
-          <div id="messageBox" class="message-box">
+          <div id="messageBox" class="message-box" role="status" aria-live="polite">
             Welcome to Sauspiel! Click "New Game" to start.
           </div>
         </section>
@@ -107,6 +107,8 @@
     <script src="src/gameRules.js"></script>
     <script src="src/uiState.js"></script>
     <script src="src/cardPresentation.js"></script>
+    <script src="src/apiClient.js"></script>
+    <script src="src/botOrchestrator.js"></script>
     <script src="src/game.js"></script>
   </body>
 </html>

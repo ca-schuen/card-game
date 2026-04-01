@@ -2,6 +2,10 @@
 
 This folder contains UX Design Briefs produced by the **UI/UX Designer** agent for each feature.
 
+## Current Briefs
+
+- [dynamic-ci-smoke-tests-ux-brief.md](dynamic-ci-smoke-tests-ux-brief.md) - Developer/operator UX for CI smoke result readability and failure triage flow.
+
 ## Naming Convention
 
 ```
