@@ -2,7 +2,7 @@
  * Sauspiel Game Controller
  * Manages game state, player turns, and UI updates
  */
-/* global createLongDeck, dealCards, isTrump, GAME_TYPES, determineTrickWinner, countTrickPoints, getVisiblePlayer, shouldShowBiddingControls */
+/* global createLongDeck, dealCards, isTrump, GAME_TYPES, determineTrickWinner, countTrickPoints, getVisiblePlayer, shouldShowBiddingControls, toCardPresentation */
 
 class SauspielGame {
   constructor() {
@@ -276,16 +276,25 @@ class SauspielGame {
     handContainer.innerHTML = '';
 
     hand.forEach((card, index) => {
-      const cardEl = this.createCardElement(card);
+      const isPlayingPhase = this.gamePhase === 'playing';
+      const isPlayable = isPlayingPhase && this.isCardPlayable(card);
+      const cardEl = this.createCardElement(card, {
+        interactive: true,
+        playable: isPlayable
+      });
+
       cardEl.onclick = () => {
-        if (this.gamePhase === 'playing') {
+        if (isPlayable) {
           this.playCard(index);
         }
       };
 
-      // Mark playable cards
-      if (this.gamePhase === 'playing' && this.isCardPlayable(card)) {
-        cardEl.classList.add('playable');
+      cardEl.disabled = !isPlayable;
+      cardEl.setAttribute('aria-disabled', String(!isPlayable));
+      cardEl.dataset.stateLabel = isPlayable ? 'Playable' : 'Not playable';
+
+      if (!isPlayable) {
+        cardEl.title = 'Not playable right now';
       }
 
       handContainer.appendChild(cardEl);
@@ -319,7 +328,9 @@ class SauspielGame {
 
       const playedCard = this.currentTrick.find((play) => play.player === i);
       if (playedCard) {
-        position.appendChild(this.createCardElement(playedCard.card));
+        position.appendChild(
+          this.createCardElement(playedCard.card, { interactive: false })
+        );
       } else {
         const placeholder = document.createElement('div');
         placeholder.className = 'placeholder';
@@ -344,15 +355,38 @@ class SauspielGame {
   /**
    * Create a card element
    */
-  createCardElement(card) {
-    const el = document.createElement('div');
-    el.className = 'card';
+  createCardElement(card, options = {}) {
+    const presentation = toCardPresentation(card);
+    const isInteractive = Boolean(options.interactive);
 
-    // Add suit class
-    const suitMap = { E: 'diamond', G: 'club', H: 'heart', S: 'spade' };
-    el.classList.add('suit-' + suitMap[card.suit]);
+    const el = document.createElement(isInteractive ? 'button' : 'div');
+    if (isInteractive) {
+      el.type = 'button';
+    }
 
-    el.textContent = card.rank;
+    el.className = 'card ' + presentation.semanticClass;
+
+    if (options.playable) {
+      el.classList.add('playable');
+    }
+
+    if (!presentation.isKnownCard) {
+      el.classList.add('card-fallback');
+    }
+
+    const primaryLine = document.createElement('span');
+    primaryLine.className = 'card-primary';
+    primaryLine.textContent = presentation.shortLabel;
+
+    const secondaryLine = document.createElement('span');
+    secondaryLine.className = 'card-secondary';
+    secondaryLine.textContent = presentation.ariaLabel;
+
+    el.appendChild(primaryLine);
+    el.appendChild(secondaryLine);
+
+    el.setAttribute('aria-label', presentation.ariaLabel);
+    el.setAttribute('title', presentation.shortLabel);
 
     return el;
   }

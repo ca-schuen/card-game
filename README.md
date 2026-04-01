@@ -55,6 +55,24 @@ npm run test:ci  # Run tests with coverage report
 2. Click "New Game" to start playing
 3. Follow on-screen prompts for bidding and card play
 
+### Card Display (Issue #13)
+
+- Cards are rendered as text-first German/Altenburg labels (no PNG card-face identity assets in gameplay).
+- Card identity uses canonical notation: `Rank + SuitName` (for example: `O Eichel`, `10 Herz`).
+- A shared presentation helper in `src/cardPresentation.js` maps canonical card codes to visible labels and spoken accessibility labels.
+- The UI includes a compact migration helper near game status:
+    - `Diamonds -> Eichel`
+    - `Clubs -> Gras`
+    - `Hearts -> Herz`
+    - `Spades -> Schellen`
+
+### Accessibility Notes
+
+- Card meaning is always visible as text, not color-only cues.
+- Hand cards are interactive buttons, so keyboard users can navigate with Tab and activate with Enter/Space.
+- Playable vs non-playable states are indicated with readable state labels and visible focus styling.
+- Mobile styles keep primary and secondary card text readable at smaller breakpoints.
+
 ## File Structure
 
 ```
@@ -62,9 +80,11 @@ card-game/
 ├── index.html              # Game UI entry point
 ├── src/
 │   ├── gameRules.js        # Core game logic (32-card deck, rules, scoring)
+│   ├── cardPresentation.js # Card presentation mapping (German suit/rank labels + aria text)
 │   ├── game.js             # Game controller (UI binding, state management)
 │   └── style.css           # Game UI styling
 ├── tests/
+│   ├── cardPresentation.test.js # Unit tests for presentation mapping
 │   ├── gameRules.test.js   # Unit tests for game rules
 │   └── game.test.js        # Integration tests for game controller
 ├── scripts/
@@ -73,8 +93,11 @@ card-game/
 │   └── wait-quality-gates.ps1      # Monitor CI status
 ├── docs/
 │   ├── local-agent-mode.md         # Multi-agent workflow guide
+│   ├── architecture-german-altenburg-text-cards.md # Architecture notes for text-first cards
+│   ├── task-plan-german-altenburg-text-cards.md    # Delivery plan for Issue #13
 │   └── ux/
-│       └── Sauspiel_UX_Brief.md    # UX design documentation
+│       ├── README.md               # UX brief conventions
+│       └── german-altenburg-text-cards-ux-brief.md # UX brief for Issue #13
 └── .github/
     ├── agents/                     # Custom CodeLM agents
     ├── prompts/                    # Feature prompts
