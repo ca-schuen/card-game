@@ -31,13 +31,25 @@ jobs:
 
   backend-quality:
     runs-on: ubuntu-latest
+    outputs:
+      has_backend: ${{ steps.backend-check.outputs.has_backend }}
 
     steps:
+      - name: Detect backend project
+        id: backend-check
+        run: |
+          if [ -f backend/pom.xml ]; then
+            echo "has_backend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_backend=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout
+        if: steps.backend-check.outputs.has_backend == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Java
-        if: ${{ hashFiles('backend/pom.xml') != '' }}
+        if: steps.backend-check.outputs.has_backend == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -45,5 +57,88 @@ jobs:
           cache: maven
 
       - name: Verify backend
-        if: ${{ hashFiles('backend/pom.xml') != '' }}
+        if: steps.backend-check.outputs.has_backend == 'true'
         run: mvn -f backend/pom.xml verify
+
+      - name: Backend not present
+        if: steps.backend-check.outputs.has_backend == 'false'
+        run: echo "Skipping backend verify because backend/pom.xml is missing"
+
+  smoke-e2e:
+    needs:
+      - frontend-quality
+      - backend-quality
+    if: ${{ always() && needs['frontend-quality'].result == 'success' && needs['backend-quality'].result == 'success' && needs['backend-quality'].outputs.has_backend == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Boot backend
+        run: |
+          mkdir -p artifacts/smoke
+          echo "SMOKE_PHASE Boot backend"
+          nohup mvn -f backend/pom.xml -DskipTests spring-boot:run > artifacts/smoke/backend.log 2>&1 &
+          echo $! > artifacts/smoke/backend.pid
+
+      - name: Boot frontend
+        run: |
+          echo "SMOKE_PHASE Boot frontend"
+          nohup node -e "const http=require('http');const fs=require('fs');const path=require('path');const root=process.cwd();const mime={'html':'text/html','js':'application/javascript','css':'text/css'};const server=http.createServer((req,res)=>{const target=req.url==='/'?'index.html':req.url.replace(/^\//,'');const file=path.join(root,target);fs.readFile(file,(err,data)=>{if(err){res.statusCode=404;res.end('not found');return;}const ext=path.extname(file).slice(1);res.setHeader('content-type',mime[ext]||'text/plain');res.end(data);});});server.listen(4173,'127.0.0.1');setInterval(()=>{},1<<30);" > artifacts/smoke/frontend.log 2>&1 &
+          echo $! > artifacts/smoke/frontend.pid
+
+      - name: Wait for health
+        run: node scripts/ci/healthcheck.js --output artifacts/smoke/healthcheck.json
+
+      - name: Run game 1
+        run: node scripts/ci/play-two-games.js --game-count 1 --output artifacts/smoke/game-1.json
+
+      - name: Run game 2
+        run: node scripts/ci/play-two-games.js --game-count 1 --output artifacts/smoke/game-2.json
+
+      - name: Validate expected errors
+        run: node scripts/ci/smoke-runner.js --mode validate --artifact-dir artifacts/smoke --health-path artifacts/smoke/healthcheck.json --games artifacts/smoke/game-1.json,artifacts/smoke/game-2.json
+
+      - name: Assert no unexpected errors
+        run: |
+          node -e "const fs=require('fs');const summary=JSON.parse(fs.readFileSync('artifacts/smoke/summary.json','utf8'));if(summary.result!=='PASS'){console.error('SMOKE_DIAG '+JSON.stringify({type:'unexpected-error',failedPhase:'Assert no unexpected errors',policyFailures:summary.policy.policyFailures||[]}));process.exit(1);}"
+
+      - name: Publish smoke summary
+        if: always()
+        run: |
+          if [ -f artifacts/smoke/summary.md ]; then
+            cat artifacts/smoke/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "SMOKE_DIAG {\"type\":\"test-runner-error\",\"failedPhase\":\"Publish smoke summary\",\"message\":\"summary.md missing\"}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Stop smoke services
+        if: always()
+        run: |
+          if [ -f artifacts/smoke/backend.pid ]; then kill "$(cat artifacts/smoke/backend.pid)" || true; fi
+          if [ -f artifacts/smoke/frontend.pid ]; then kill "$(cat artifacts/smoke/frontend.pid)" || true; fi
+
+      - name: Upload smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-artifacts
+          path: artifacts/smoke/**
+          if-no-files-found: warn

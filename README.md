@@ -37,6 +37,7 @@ This repository is prepared for a local multi-agent development flow with:
 - Frontend card game code in `src/`
 - Tests in `tests/`
 - Spring Boot bot-player backend in `backend/`
+- Dynamic smoke CI helpers in `scripts/ci/`
 - CI quality gates in GitHub Actions
 - Custom Copilot agents for organized feature delivery
 
@@ -104,11 +105,12 @@ card-game/
 ├── scripts/
 │   ├── feature-orchestrator.ps1    # Create feature branch and issue
 │   ├── create-pr.ps1               # Open pull request
-│   └── wait-quality-gates.ps1      # Monitor CI status
+│   ├── wait-quality-gates.ps1      # Monitor CI status
+│   └── ci/                         # Smoke CI helpers and policy
 ├── docs/
 │   ├── local-agent-mode.md         # Multi-agent workflow guide
 │   └── ux/
-│       └── Sauspiel_UX_Brief.md    # UX design documentation
+│       └── dynamic-ci-smoke-tests-ux-brief.md  # UX design documentation for smoke tests
 └── .github/
     ├── agents/                     # Custom CodeLM agents
     ├── prompts/                    # Feature prompts
@@ -155,12 +157,41 @@ scripts/create-pr.ps1 -Issue <issue-number> -Title "<pr-title>"
 scripts/wait-quality-gates.ps1 -PullRequestNumber <pr-number>
 ```
 
+### Smoke CI Scripts
+
+- `scripts/ci/healthcheck.js`: Waits for backend health and writes `artifacts/smoke/healthcheck.json`.
+- `scripts/ci/play-two-games.js`: Runs game simulation calls against backend endpoints and records diagnostics.
+- `scripts/ci/smoke-runner.js`: Orchestrates smoke validation and enforces expected/unexpected error gates.
+- `scripts/ci/expected-errors.policy.json`: Policy contract for allowed statuses/message patterns and required pass/error thresholds.
+
 ## Continuous Integration
 
 **CI Pipeline** (`.github/workflows/ci.yml`):
 - ✅ Frontend: ESLint + Jest tests
 - ✅ Backend: Maven verify (`mvn -f backend/pom.xml verify`)
+- ✅ Dynamic smoke job (`smoke-e2e`) runs after quality gates when backend project is detected
 - ✅ Code coverage and quality gates
+
+### Dynamic Smoke CI Flow (Issue #11)
+
+The `smoke-e2e` job is a lightweight runtime check that:
+1. Boots backend and frontend services.
+2. Waits for backend health (`Wait for health` phase).
+3. Runs 2 game simulations (`Run game 1` and `Run game 2`).
+4. Validates expected errors using `scripts/ci/expected-errors.policy.json`.
+5. Fails on unexpected errors and publishes a smoke summary artifact.
+
+The smoke job remains backend-aware and executes when the backend project is present.
+
+### Run Smoke Locally
+
+Start backend and frontend (same as CI intent), then run:
+
+```powershell
+npm run smoke:ci
+```
+
+`npm run smoke:ci` runs `scripts/ci/smoke-runner.js`, which performs healthcheck, executes two games, and enforces expected/unexpected error gating from `scripts/ci/expected-errors.policy.json`.
 
 Current automated coverage includes 54 JavaScript tests and 27 Java tests.
 

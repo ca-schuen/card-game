@@ -1,0 +1,11 @@
+{
+  "allowedStatuses": [404, 405, 409, 422],
+  "allowedMessagePatterns": [
+    "not found",
+    "method not allowed",
+    "unsupported",
+    "validation"
+  ],
+  "maxAllowedErrors": 20,
+  "requiredPassCount": 2
+}
